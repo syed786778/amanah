@@ -8,16 +8,33 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
-        .active-tab {
-            border-bottom: 4px solid #9333ea; /* Purple-600 */
-            color: #9333ea;
+        /* Define a refined shadow for the new card look */
+        .card-shadow {
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
+        }
+        /* Refined, modern gradient button style */
+        .btn-gradient-purple {
+            background: linear-gradient(135deg, #a855f7, #9333ea);
+            transition: all 0.3s ease;
+        }
+        .btn-gradient-purple:hover {
+            background: linear-gradient(135deg, #9333ea, #7e22ce);
+            transform: translateY(-1px);
+        }
+        /* Custom scrollbar for gallery in viewer mode */
+        .gallery-container {
+            -ms-overflow-style: none; /* IE and Edge */
+            scrollbar-width: none; /* Firefox */
+        }
+        .gallery-container::-webkit-scrollbar {
+            display: none; /* Chrome, Safari, Opera */
         }
     </style>
 </head>
-<body>
+<body class="bg-gray-900 text-gray-200">
     <div id="app"></div>
     <script>
-        // !! WARNING: Replace these with secure environment variables in a production setup !!
+        
         const SUPABASE_URL = 'https://imiljivxosyrcosznklh.supabase.co';
         const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImltaWxqaXZ4b3N5cmNvc3pua2xoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQxMTIwOTcsImV4cCI6MjA3OTY4ODA5N30.TOgeuC3-RdG2ywIxDz2NWRhLHI4gxTkG4pilaZBqhso';
         
@@ -25,7 +42,7 @@
         
         let state = {
             view: 'home',
-            homeTab: 'upload', // New state variable for the tabbed interface
+            homeTab: 'upload', 
             currentAlbum: null,
             uploaderInfo: { name: '', email: '' },
             photos: [],
@@ -50,127 +67,249 @@
         function closeLightbox(){state.lightboxIndex=null;render()}
         function nextPhoto(){if(state.lightboxIndex<state.currentAlbum.photos.length-1){state.lightboxIndex++;render()}}
         function prevPhoto(){if(state.lightboxIndex>0){state.lightboxIndex--;render()}}
-        
-        // --- Core Logic Functions (Unchanged but simplified for space) ---
-        async function manageAlbum(){/* ... (Original logic) ... */
-             if(!state.manageEmail){alert('Please enter your email');return}state.loading=true;render();try{const{data:albums,error}=await supabase.from('albums').select('*').eq('email',state.manageEmail.trim().toLowerCase());if(error)throw error;if(!albums||albums.length===0){alert('No albums found with this email address.');state.loading=false;render();return}if(albums.length===1){const album=albums[0];const{data:photos,error:photoError}=await supabase.from('photos').select('*').eq('album_id',album.id).order('created_at',{ascending:true});if(photoError)throw photoError;state.currentAlbum={...album,photos:photos.map(p=>p.photo_data)};state.otp=album.otp;state.otpExpiry=album.otp_expiry;state.shareLink=location.origin+location.pathname+'?album='+album.id;state.view='gallery';state.loading=false;render()}else{state.loading=false;alert('Multiple albums found. Select one:');const albumList=albums.map((a,i)=>`${i+1}. Album ID: ${a.id} (Created: ${new Date(a.created_at).toLocaleDateString()})`).join('\n');const selection=prompt(albumList+'\n\nEnter number (1-'+albums.length+'):');if(selection){const idx=parseInt(selection)-1;if(idx>=0&&idx<albums.length){const album=albums[idx];const{data:photos,error:photoError}=await supabase.from('photos').select('*').eq('album_id',album.id).order('created_at',{ascending:true});if(photoError)throw photoError;state.currentAlbum={...album,photos:photos.map(p=>p.photo_data)};state.otp=album.otp;state.otpExpiry=album.otp_expiry;state.shareLink=location.origin+location.pathname+'?album='+album.id;state.view='gallery';render()}else{alert('Invalid selection')}}}}catch(e){console.error('Manage error:',e);alert('Failed to load albums: '+e.message);state.loading=false;render()}}
-        
-        async function upload(){/* ... (Original logic) ... */
-            if(!state.uploaderInfo.name||!state.uploaderInfo.email||!state.photos.length){alert('Please fill all required fields and upload at least one photo');return}state.loading=true;render();try{const e=genAlbumId(),t=genOTP(),n=Date.now()+864e5,{data:a,error:o}=await supabase.from('albums').insert({id:e,name:state.uploaderInfo.name,email:state.uploaderInfo.email.trim().toLowerCase(),otp:t,otp_expiry:n,created_at:Date.now()}).select().single();if(o)throw o;const{error:r}=await supabase.from('photos').insert(state.photos.map(t=>({album_id:e,photo_data:t})));if(r)throw r;const{data:s,error:i}=await supabase.from('photos').select('*').eq('album_id',e);if(i)throw i;state.currentAlbum={...a,photos:s.map(e=>e.photo_data)};state.otp=t;state.otpExpiry=n;state.shareLink=location.origin+location.pathname+'?album='+e;state.view='gallery';state.loading=false;render()}catch(e){console.error('Upload error:',e);alert('Failed to create album: '+e.message);state.loading=false;render()}}
-
-        async function regenOTP(){/* ... (Original logic) ... */
-            if(!state.currentAlbum)return;state.loading=true;render();try{const e=genOTP(),t=Date.now()+864e5,{error:n}=await supabase.from('albums').update({otp:e,otp_expiry:t}).eq('id',state.currentAlbum.id);if(n)throw n;state.currentAlbum.otp=e;state.otp=e;state.otpExpiry=t;state.loading=false;alert('New OTP generated successfully!');render()}catch(e){console.error('OTP error:',e);alert('Failed to regenerate OTP: '+e.message);state.loading=false;render()}}
-        
-        async function expireOTP(){/* ... (Original logic) ... */
-            if(!state.currentAlbum)return;if(!confirm('Expire OTP now? This will immediately block all access to your album.'))return;state.loading=true;render();try{const e=Date.now()-1000,{error:t}=await supabase.from('albums').update({otp_expiry:e}).eq('id',state.currentAlbum.id);if(t)throw t;state.currentAlbum.otp_expiry=e;state.otpExpiry=e;state.loading=false;alert('OTP expired successfully! No one can access this album now.');render()}catch(e){console.error('Expire OTP error:',e);alert('Failed to expire OTP: '+e.message);state.loading=false;render()}}
-        
-        async function verify(){/* ... (Original logic) ... */
-            if(!state.albumIdToView||!state.viewerOtp){alert('Please enter both Album ID and OTP');return}state.loading=true;render();try{const{data:e,error:t}=await supabase.from('albums').select('*').eq('id',state.albumIdToView).single();if(t||!e){alert('Album not found. Please check your Album ID.');state.loading=false;render();return}if(Date.now()>e.otp_expiry){alert('OTP has expired. Please contact the album owner to regenerate it.');state.loading=false;render();return}if(e.otp!==state.viewerOtp){alert('Invalid OTP. Please check and try again.');state.loading=false;render();return}const{data:n,error:a}=await supabase.from('photos').select('*').eq('album_id',state.albumIdToView).order('created_at',{ascending:true});if(a)throw a;state.currentAlbum={...e,photos:n.map(e=>e.photo_data)};state.isVerified=true;state.view='view';state.loading=false;setupProtection();render()}catch(e){console.error('Verify error:',e);alert('Failed to verify album: '+e.message);state.loading=false;render()}}
-        
-        async function delPhoto(e){/* ... (Original logic) ... */
-            if(!confirm('Are you sure you want to delete this photo?'))return;state.loading=true;render();try{const{data:t,error:n}=await supabase.from('photos').select('id').eq('album_id',state.currentAlbum.id).order('created_at',{ascending:true});if(n)throw n;if(t.length===1){if(confirm('This is the last photo. Delete the entire album?')){await delAlbum();return}else{state.loading=false;render();return}}const a=t[e],{error:o}=await supabase.from('photos').delete().eq('id',a.id);if(o)throw o;state.currentAlbum.photos=state.currentAlbum.photos.filter((t,n)=>n!==e);state.loading=false;alert('Photo deleted successfully');render()}catch(e){console.error('Delete error:',e);alert('Failed to delete photo: '+e.message);state.loading=false;render()}}
-        
-        async function delAlbum(){/* ... (Original logic) ... */
-            if(!confirm('Are you sure you want to delete this entire album? This action cannot be undone.'))return;state.loading=true;render();try{const{error:e}=await supabase.from('albums').delete().eq('id',state.currentAlbum.id);if(e)throw e;state.view='home';state.currentAlbum=null;state.loading=false;alert('Album deleted successfully');render()}catch(e){console.error('Delete error:',e);alert('Failed to delete album: '+e.message);state.loading=false;render()}}
-
         function handleFiles(e){const t=Array.from(e.target.files);Promise.all(t.map(e=>new Promise(t=>{const n=new FileReader();n.onload=e=>t(e.target.result);n.readAsDataURL(e)}))).then(e=>{state.photos=[...state.photos,...e];render()})}
         function nav(e){state.view=e;if(e==='home'){state.photos=[];state.uploaderInfo={name:'',email:''};state.currentAlbum=null;state.isVerified=false;state.viewerOtp='';state.albumIdToView='';state.lightboxIndex=null;state.manageEmail='';window.history.pushState({},document.title,location.pathname)}render()}
 
-        // --- Modular Render Functions (NEW) ---
+        // --- Core Logic Functions (Abridged for brevity, original functionality retained) ---
+        async function manageAlbum(){/* ... (Original logic) ... */
+             if(!state.manageEmail){alert('Please enter your email');return}state.loading=true;render();try{const{data:albums,error}=await supabase.from('albums').select('*').eq('email',state.manageEmail.trim().toLowerCase());if(error)throw error;if(!albums||albums.length===0){alert('No albums found with this email address.');state.loading=false;render();return}if(albums.length===1){const album=albums[0];const{data:photos,error:photoError}=await supabase.from('photos').select('*').eq('album_id',album.id).order('created_at',{ascending:true});if(photoError)throw photoError;state.currentAlbum={...album,photos:photos.map(p=>p.photo_data)};state.otp=album.otp;state.otpExpiry=album.otp_expiry;state.shareLink=location.origin+location.pathname+'?album='+album.id;state.view='gallery';state.loading=false;render()}else{state.loading=false;alert('Multiple albums found. Select one:');const albumList=albums.map((a,i)=>`${i+1}. Album ID: ${a.id} (Created: ${new Date(a.created_at).toLocaleDateString()})`).join('\n');const selection=prompt(albumList+'\n\nEnter number (1-'+albums.length+'):');if(selection){const idx=parseInt(selection)-1;if(idx>=0&&idx<albums.length){const album=albums[idx];const{data:photos,error:photoError}=await supabase.from('photos').select('*').eq('album_id',album.id).order('created_at',{ascending:true});if(photoError)throw photoError;state.currentAlbum={...album,photos:photos.map(p=>p.photo_data)};state.otp=album.otp;state.otpExpiry=album.otp_expiry;state.shareLink=location.origin+location.pathname+'?album='+album.id;state.view='gallery';render()}else{alert('Invalid selection')}}}}catch(e){console.error('Manage error:',e);alert('Failed to load albums: '+e.message);state.loading=false;render()}}
+        async function upload(){/* ... (Original logic) ... */
+            if(!state.uploaderInfo.name||!state.uploaderInfo.email||!state.photos.length){alert('Please fill all required fields and upload at least one photo');return}state.loading=true;render();try{const e=genAlbumId(),t=genOTP(),n=Date.now()+864e5,{data:a,error:o}=await supabase.from('albums').insert({id:e,name:state.uploaderInfo.name,email:state.uploaderInfo.email.trim().toLowerCase(),otp:t,otp_expiry:n,created_at:Date.now()}).select().single();if(o)throw o;const{error:r}=await supabase.from('photos').insert(state.photos.map(t=>({album_id:e,photo_data:t})));if(r)throw r;const{data:s,error:i}=await supabase.from('photos').select('*').eq('album_id',e);if(i)throw i;state.currentAlbum={...a,photos:s.map(e=>e.photo_data)};state.otp=t;state.otpExpiry=n;state.shareLink=location.origin+location.pathname+'?album='+e;state.view='gallery';state.loading=false;render()}catch(e){console.error('Upload error:',e);alert('Failed to create album: '+e.message);state.loading=false;render()}}
+        async function regenOTP(){/* ... (Original logic) ... */
+            if(!state.currentAlbum)return;state.loading=true;render();try{const e=genOTP(),t=Date.now()+864e5,{error:n}=await supabase.from('albums').update({otp:e,otp_expiry:t}).eq('id',state.currentAlbum.id);if(n)throw n;state.currentAlbum.otp=e;state.otp=e;state.otpExpiry=t;state.loading=false;alert('New OTP generated successfully!');render()}catch(e){console.error('OTP error:',e);alert('Failed to regenerate OTP: '+e.message);state.loading=false;render()}}
+        async function expireOTP(){/* ... (Original logic) ... */
+            if(!state.currentAlbum)return;if(!confirm('Expire OTP now? This will immediately block all access to your album.'))return;state.loading=true;render();try{const e=Date.now()-1000,{error:t}=await supabase.from('albums').update({otp_expiry:e}).eq('id',state.currentAlbum.id);if(t)throw t;state.currentAlbum.otp_expiry=e;state.otpExpiry=e;state.loading=false;alert('OTP expired successfully! No one can access this album now.');render()}catch(e){console.error('Expire OTP error:',e);alert('Failed to expire OTP: '+e.message);state.loading=false;render()}}
+        async function verify(){/* ... (Original logic) ... */
+            if(!state.albumIdToView||!state.viewerOtp){alert('Please enter both Album ID and OTP');return}state.loading=true;render();try{const{data:e,error:t}=await supabase.from('albums').select('*').eq('id',state.albumIdToView).single();if(t||!e){alert('Album not found. Please check your Album ID.');state.loading=false;render();return}if(Date.now()>e.otp_expiry){alert('OTP has expired. Please contact the album owner to regenerate it.');state.loading=false;render();return}if(e.otp!==state.viewerOtp){alert('Invalid OTP. Please check and try again.');state.loading=false;render();return}const{data:n,error:a}=await supabase.from('photos').select('*').eq('album_id',state.albumIdToView).order('created_at',{ascending:true});if(a)throw a;state.currentAlbum={...e,photos:n.map(e=>e.photo_data)};state.isVerified=true;state.view='view';state.loading=false;setupProtection();render()}catch(e){console.error('Verify error:',e);alert('Failed to verify album: '+e.message);state.loading=false;render()}}
+        async function delPhoto(e){/* ... (Original logic) ... */
+            if(!confirm('Are you sure you want to delete this photo?'))return;state.loading=true;render();try{const{data:t,error:n}=await supabase.from('photos').select('id').eq('album_id',state.currentAlbum.id).order('created_at',{ascending:true});if(n)throw n;if(t.length===1){if(confirm('This is the last photo. Delete the entire album?')){await delAlbum();return}else{state.loading=false;render();return}}const a=t[e],{error:o}=await supabase.from('photos').delete().eq('id',a.id);if(o)throw o;state.currentAlbum.photos=state.currentAlbum.photos.filter((t,n)=>n!==e);state.loading=false;alert('Photo deleted successfully');render()}catch(e){console.error('Delete error:',e);alert('Failed to delete photo: '+e.message);state.loading=false;render()}}
+        async function delAlbum(){/* ... (Original logic) ... */
+            if(!confirm('Are you sure you want to delete this entire album? This action cannot be undone.'))return;state.loading=true;render();try{const{error:e}=await supabase.from('albums').delete().eq('id',state.currentAlbum.id);if(e)throw e;state.view='home';state.currentAlbum=null;state.loading=false;alert('Album deleted successfully');render()}catch(e){console.error('Delete error:',e);alert('Failed to delete album: '+e.message);state.loading=false;render()}}
+        // --- Modular Render Functions (Updated for New Design) ---
 
         function renderFooter(){
-            return '<footer class="bg-gray-900 text-white mt-12"><div class="max-w-6xl mx-auto px-4 py-8"><div class="grid md:grid-cols-3 gap-8"><div><h3 class="text-lg font-bold mb-4 text-purple-400">About Amanah</h3><p class="text-sm text-gray-300 mb-3">Created by <strong>Syed Rashad</strong>, Amanah was born from personal experience with the challenges of sharing marriage profile photos in today\'s digital age.</p><p class="text-sm text-gray-300">Amanah ensures your precious moments remain protected while sharing them confidently with intended recipients.</p></div><div><h3 class="text-lg font-bold mb-4 text-purple-400">Legal & Privacy</h3><p class="text-xs text-gray-400 leading-relaxed"><strong class="text-red-400">⚠️ Cybercrime Warning:</strong> Unauthorized misuse of photos from this platform is a criminal offense under global laws.<br/><br/><strong>Disclaimer:</strong> This service is provided "as is" without warranties. Users are solely responsible for content uploaded.</p></div><div><h3 class="text-lg font-bold mb-4 text-purple-400">Contact & Support</h3><p class="text-sm text-gray-300 mb-2">For questions or support:</p><p class="text-sm text-gray-400">Email: help.amanahapp@gmail.com </p><p class="text-sm text-gray-400 mt-4">© 2024 Amanah by Syed Rashad</p></div></div><div class="border-t border-gray-700 mt-6 pt-6 text-center text-xs text-gray-500">أمانة - Trustworthy Protection</div></div></footer>';
+            return '<footer class="bg-gray-900 border-t border-gray-700 text-gray-500 mt-16"><div class="max-w-6xl mx-auto px-4 py-8"><div class="grid md:grid-cols-3 gap-8"><div><h3 class="text-lg font-bold mb-4 text-purple-400">About Amanah</h3><p class="text-sm text-gray-400 mb-3">Created by Syed Rashad, Amanah offers a secure, controlled way to share sensitive profile photos digitally.</p><p class="text-sm text-gray-400">Protection is paramount in the digital age.</p></div><div><h3 class="text-lg font-bold mb-4 text-purple-400">Legal & Security</h3><p class="text-xs text-gray-500 leading-relaxed"><strong class="text-red-500">⚠️ Cybercrime Warning:</strong> Unauthorized misuse of photos is a criminal offense under IT Act 2000 and international cyber laws.<br/><br/><strong>Disclaimer:</strong> Use at your own risk. The platform owner is not liable for user-uploaded content or misuse.</p></div><div><h3 class="text-lg font-bold mb-4 text-purple-400">Contact</h3><p class="text-sm text-gray-400 mb-2">Email: help.amanahapp@gmail.com </p><p class="text-sm text-gray-500 mt-4">© 2024 Amanah by Syed Rashad</p></div></div><div class="border-t border-gray-800 mt-6 pt-6 text-center text-xs text-gray-600">أمانة - Trustworthy Protection</div></div></footer>';
         }
 
         function renderLoading(){
-            // Full screen loading overlay for better UX
-            return '<div class="fixed inset-0 bg-white bg-opacity-70 z-50 flex flex-col items-center justify-center"><div class="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-purple-600"></div><span class="mt-4 text-xl font-semibold text-gray-700">Processing request...</span></div>';
+            return '<div class="fixed inset-0 bg-gray-900 bg-opacity-90 z-50 flex flex-col items-center justify-center"><div class="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-purple-500"></div><span class="mt-4 text-xl font-semibold text-gray-300">Processing secure request...</span></div>';
         }
 
-        function renderUploadForm() {
-            return '<div class="bg-white rounded-xl shadow-xl p-8"><h2 class="text-2xl font-bold mb-6 text-center text-purple-600">1. Upload Your Album</h2><p class="text-gray-600 mb-6">Enter your details and upload the photos you wish to share securely. You will receive an Album ID and OTP.</p><div class="mb-4"><label for="uploaderName" class="block text-gray-700 font-semibold mb-2">Your Name <span class="text-red-600">*</span></label><input type="text" id="uploaderName" oninput="state.uploaderInfo.name=this.value" value="'+state.uploaderInfo.name+'" placeholder="Enter your full name" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-600"></div><div class="mb-6"><label for="uploaderEmail" class="block text-gray-700 font-semibold mb-2">Your Email <span class="text-red-600">*</span></label><input type="email" id="uploaderEmail" oninput="state.uploaderInfo.email=this.value" value="'+state.uploaderInfo.email+'" placeholder="your.email@example.com" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-600"></div><div class="mb-6"><label for="photoUpload" class="block text-gray-700 font-semibold mb-2">Upload Photos <span class="text-red-600">*</span></label><input type="file" id="photoUpload" accept="image/*" multiple onchange="handleFiles(event)" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-600">'+(state.photos.length?'<p class="mt-2 text-sm text-green-600 font-medium">✓ '+state.photos.length+' photo(s) selected</p>':'<p class="mt-2 text-sm text-gray-500">Select one or more images</p>')+'</div>'+(state.photos.length?'<div class="mb-8"><p class="text-sm font-semibold text-gray-700 mb-3">Preview ('+state.photos.length+' photos):</p><div class="grid grid-cols-4 gap-3">'+state.photos.map((p,idx)=>'<img src="'+p+'" alt="Preview '+idx+'" class="w-full h-20 object-cover rounded-lg border border-gray-200">').join('')+'</div></div>':'')+'<button onclick="upload()" class="w-full bg-purple-600 text-white py-4 rounded-lg hover:bg-purple-700 font-bold text-lg transition-all shadow-lg">Create Secure Album</button></div>';
-        }
-
-        function renderManageForm() {
-            return '<div class="bg-white rounded-xl shadow-xl p-8"><h2 class="text-2xl font-bold mb-6 text-center text-orange-600">2. Manage Existing Album</h2><p class="text-gray-600 mb-6">Enter the email you used to create the album to access your management dashboard.</p><div class="mb-6"><label for="manageEmail" class="block text-gray-700 font-semibold mb-2">Your Email <span class="text-red-600">*</span></label><input type="email" id="manageEmail" oninput="state.manageEmail=this.value" value="'+state.manageEmail+'" placeholder="Enter album creation email" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-600"></div><button onclick="manageAlbum()" class="w-full bg-orange-600 text-white py-4 rounded-lg hover:bg-orange-700 font-bold text-lg transition-all shadow-lg">Access My Albums</button><div class="mt-6 bg-yellow-50 border-l-4 border-yellow-400 p-4"><p class="text-sm text-yellow-800">💡 This allows you to regenerate OTP, expire access, or delete photos permanently.</p></div></div>';
-        }
-
-        function renderViewerForm() {
-            return '<div class="bg-white rounded-xl shadow-xl p-8"><h2 class="text-3xl font-bold mb-6 text-center text-pink-600">3. View Photos Securely</h2><div class="bg-red-50 border-l-4 border-red-500 p-4 mb-6"><p class="text-xs text-red-800 leading-relaxed"><strong>⚠️ Security Notice:</strong> This content is private. Unauthorized use, copying, or distribution is a criminal offense.</p></div><div class="mb-4"><label for="viewerAlbumId" class="block text-gray-700 font-semibold mb-2">Album ID <span class="text-red-600">*</span></label><input type="text" id="viewerAlbumId" value="'+state.albumIdToView+'" oninput="state.albumIdToView=this.value.trim()" placeholder="Enter album ID" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-600 font-mono"></div><div class="mb-6"><label for="viewerOtpInput" class="block text-gray-700 font-semibold mb-2">OTP <span class="text-red-600">*</span></label><input type="text" id="viewerOtpInput" inputmode="numeric" maxlength="6" oninput="state.viewerOtp=this.value.trim()" placeholder="Enter 6-digit OTP" class="w-full px-4 py-2 border border-gray-300 rounded-lg text-center text-3xl font-mono focus:outline-none focus:ring-2 focus:ring-pink-600 tracking-widest"></div><button onclick="verify()" class="w-full bg-pink-600 text-white py-4 rounded-lg hover:bg-pink-700 font-bold text-lg transition-all shadow-lg">View Photos</button></div>';
-        }
-        
         function renderHomeView() {
-            let content = '';
-            let tabContent = '';
+            // Simplified the home view to focus on the three main action cards
+            const actionCard = (title, color, icon, content, buttonText, buttonAction) => `
+                <div class="bg-gray-800 rounded-2xl p-6 border border-gray-700 card-shadow transition-all duration-300 hover:border-${color}-500">
+                    <div class="flex items-center mb-6">
+                        <div class="bg-${color}-900/50 p-3 rounded-xl mr-4 border border-${color}-500/50">
+                            <svg class="w-8 h-8 text-${color}-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">${icon}</svg>
+                        </div>
+                        <h2 class="text-2xl font-bold text-gray-100">${title}</h2>
+                    </div>
+                    <div class="space-y-4 text-gray-400 mb-8">${content}</div>
+                    <button onclick="${buttonAction}" class="w-full text-white py-3 rounded-xl font-bold text-lg transition-all duration-300 ${color === 'purple' ? 'btn-gradient-purple' : `bg-${color}-600 hover:bg-${color}-700`}">
+                        ${buttonText}
+                    </button>
+                </div>
+            `;
             
-            if (state.homeTab === 'upload') {
-                tabContent = renderUploadForm();
-            } else if (state.homeTab === 'manage') {
-                tabContent = renderManageForm();
-            } else if (state.homeTab === 'viewer') {
-                tabContent = renderViewerForm();
-            }
+            const uploadContent = `
+                <p>1. Enter your details and upload photos securely.</p>
+                <p>2. Receive a unique Album ID, OTP, and shareable link.</p>
+                <p>3. Maintain full control over access and deletion.</p>
+            `;
+            
+            const manageContent = `
+                <p>1. Enter the email used during album creation.</p>
+                <p>2. Access your security dashboard.</p>
+                <p>3. Regenerate OTP, expire access, or delete the album instantly.</p>
+            `;
 
-            content = '<div class="min-h-screen bg-gradient-to-br from-purple-50 to-pink-50 p-4"><div class="max-w-4xl mx-auto"><div class="text-center py-8"><svg class="w-16 h-16 text-purple-600 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg><h1 class="text-5xl font-bold text-gray-800 mb-3">Amanah</h1><p class="text-xl text-gray-600 mb-2">Secure Marriage Profile Photo Sharing</p><p class="text-lg text-purple-600 italic">أمانة - Trustworthy Protection</p></div><div class="bg-white rounded-xl shadow-2xl p-0"><div class="border-b border-gray-200"><nav class="flex space-x-4 p-4 text-center"><button onclick="state.homeTab=\'upload\';render()" class="flex-1 py-3 text-lg font-semibold border-b-2 border-transparent transition-colors hover:border-purple-300 '+(state.homeTab==='upload'?'active-tab':'text-gray-600')+'">📤 Upload</button><button onclick="state.homeTab=\'manage\';render()" class="flex-1 py-3 text-lg font-semibold border-b-2 border-transparent transition-colors hover:border-orange-300 '+(state.homeTab==='manage'?'active-tab':'text-gray-600')+'">⚙️ Manage</button><button onclick="state.homeTab=\'viewer\';render()" class="flex-1 py-3 text-lg font-semibold border-b-2 border-transparent transition-colors hover:border-pink-300 '+(state.homeTab==='viewer'?'active-tab':'text-gray-600')+'">🔒 View</button></nav></div><div class="p-8">'+tabContent+'</div></div><div class="mt-8 bg-white rounded-xl shadow-xl p-6 text-center"><h3 class="text-2xl font-bold mb-4 text-gray-800">Why Amanah?</h3><div class="grid grid-cols-2 md:grid-cols-4 gap-6"><div class="text-center"><svg class="w-10 h-10 mx-auto mb-2 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg><h4 class="font-bold text-sm">OTP Protection</h4></div><div class="text-center"><svg class="w-10 h-10 mx-auto mb-2 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg><h4 class="font-bold text-sm">Screenshot Block</h4></div><div class="text-center"><svg class="w-10 h-10 mx-auto mb-2 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 15a4 4 0 004 4h9a5 5 0 10-.1-9.999 5.002 5.002 0 10-9.78 2.096A4.001 4.001 0 003 15z"/></svg><h4 class="font-bold text-sm">Cloud Storage</h4></div><div class="text-center"><svg class="w-10 h-10 mx-auto mb-2 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/></svg><h4 class="font-bold text-sm">Owner Control</h4></div></div></div></div>'+renderFooter()+'</div>';
-            
-            return content;
+            const viewerContent = `
+                <p>1. Enter the Album ID and 6-digit OTP provided by the owner.</p>
+                <p>2. View photos instantly on any device.</p>
+                <p>3. Access is secured with screenshot protection and a 24-hour expiration.</p>
+            `;
+
+            return `
+                <div class="min-h-screen pt-12">
+                    <div class="max-w-6xl mx-auto px-4">
+                        <div class="text-center mb-12">
+                            <svg class="w-16 h-16 text-purple-500 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
+                            <h1 class="text-5xl font-extrabold text-white mb-2 tracking-tight">Amanah</h1>
+                            <p class="text-xl text-gray-400 mb-6">Secure, Controlled Photo Sharing for Matrimony</p>
+                        </div>
+
+                        <div class="grid md:grid-cols-3 gap-8 mb-12">
+                            ${actionCard('Upload Photos', 'purple', '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/>', uploadContent, 'Start New Upload', 'nav(\'upload\')')}
+                            ${actionCard('Manage Access', 'orange', '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>', manageContent, 'Access Management', 'nav(\'manage\')')}
+                            ${actionCard('View Album', 'pink', '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>', viewerContent, 'Enter Album ID & OTP', 'nav(\'viewer\')')}
+                        </div>
+
+                        <div class="bg-gray-800 rounded-xl p-6 border border-gray-700">
+                            <h3 class="text-xl font-bold text-gray-200 mb-4 flex items-center"><svg class="w-6 h-6 mr-2 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/></svg>Cybercrime Warning</h3>
+                            <p class="text-sm text-red-400">Unauthorized morphing, editing, misusing, or distributing photos from this platform is a criminal offense under IT Act 2000 and global cyber laws. Violators will be prosecuted.</p>
+                        </div>
+
+                    </div>
+                    ${renderFooter()}
+                </div>
+            `;
+        }
+
+        function renderUploadView() {
+            return `
+                <div class="min-h-screen pt-12">
+                    <div class="max-w-xl mx-auto px-4">
+                        <button onclick="nav('home')" class="mb-6 text-purple-400 hover:text-purple-300 font-semibold flex items-center">← Back to Home</button>
+                        <div class="bg-gray-800 rounded-2xl shadow-xl p-8 border border-gray-700">
+                            <h2 class="text-3xl font-bold mb-8 text-center text-purple-400">Secure Photo Upload</h2>
+                            
+                            <div class="space-y-6">
+                                <div>
+                                    <label for="uploaderName" class="block text-gray-400 font-semibold mb-2">Your Name <span class="text-red-500">*</span></label>
+                                    <input type="text" id="uploaderName" oninput="state.uploaderInfo.name=this.value" value="${state.uploaderInfo.name}" placeholder="Full Name" class="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-gray-200 focus:outline-none focus:ring-2 focus:ring-purple-500">
+                                </div>
+                                <div>
+                                    <label for="uploaderEmail" class="block text-gray-400 font-semibold mb-2">Your Email <span class="text-red-500">*</span></label>
+                                    <input type="email" id="uploaderEmail" oninput="state.uploaderInfo.email=this.value" value="${state.uploaderInfo.email}" placeholder="your.email@example.com" class="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-gray-200 focus:outline-none focus:ring-2 focus:ring-purple-500">
+                                </div>
+                                <div>
+                                    <label for="photoUpload" class="block text-gray-400 font-semibold mb-2">Upload Photos <span class="text-red-500">*</span></label>
+                                    <input type="file" id="photoUpload" accept="image/*" multiple onchange="handleFiles(event)" class="w-full text-gray-300 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-purple-600 file:text-white hover:file:bg-purple-700 cursor-pointer">
+                                    ${state.photos.length ? `<p class="mt-2 text-sm text-green-400 font-medium">✓ ${state.photos.length} photo(s) selected</p>` : `<p class="mt-2 text-sm text-gray-500">Select one or more images</p>`}
+                                </div>
+                            </div>
+                            
+                            ${state.photos.length ? `
+                            <div class="mt-8 mb-6 border-t border-gray-700 pt-6">
+                                <p class="text-lg font-semibold text-gray-300 mb-3">Preview (${state.photos.length}):</p>
+                                <div class="grid grid-cols-4 gap-3">
+                                    ${state.photos.map((p,idx)=>'<img src="'+p+'" alt="Preview '+idx+'" class="w-full h-16 object-cover rounded-lg border border-gray-600">').join('')}
+                                </div>
+                            </div>
+                            ` : ''}
+
+                            <button onclick="upload()" class="w-full text-white py-4 mt-6 rounded-xl font-bold text-lg btn-gradient-purple shadow-lg">
+                                Create Album and Get OTP
+                            </button>
+                        </div>
+                    </div>
+                    ${renderFooter()}
+                </div>
+            `;
+        }
+
+        function renderManageView() {
+            return `
+                <div class="min-h-screen pt-12">
+                    <div class="max-w-md mx-auto px-4">
+                        <button onclick="nav('home')" class="mb-6 text-orange-400 hover:text-orange-300 font-semibold flex items-center">← Back to Home</button>
+                        <div class="bg-gray-800 rounded-2xl shadow-xl p-8 border border-gray-700">
+                            <h2 class="text-3xl font-bold mb-8 text-center text-orange-400">Access Album Management</h2>
+                            <p class="text-gray-400 mb-6 text-center">Enter the email used to create the album to access controls.</p>
+                            
+                            <div class="mb-8">
+                                <label for="manageEmail" class="block text-gray-400 font-semibold mb-2">Your Email <span class="text-red-500">*</span></label>
+                                <input type="email" id="manageEmail" oninput="state.manageEmail=this.value" value="${state.manageEmail}" placeholder="Enter album creation email" class="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-gray-200 focus:outline-none focus:ring-2 focus:ring-orange-500">
+                            </div>
+
+                            <button onclick="manageAlbum()" class="w-full bg-orange-600 text-white py-4 rounded-xl font-bold text-lg transition-all duration-300 hover:bg-orange-700 shadow-lg">
+                                Access Management Dashboard
+                            </button>
+
+                            <div class="mt-6 bg-gray-700/50 border-l-4 border-orange-500 p-4 rounded-lg">
+                                <p class="text-sm text-gray-300">💡 If you have multiple albums, you will be prompted to select one.</p>
+                            </div>
+                        </div>
+                    </div>
+                    ${renderFooter()}
+                </div>
+            `;
+        }
+
+        function renderViewerView() {
+            return `
+                <div class="min-h-screen pt-12">
+                    <div class="max-w-md mx-auto px-4">
+                        <button onclick="nav('home')" class="mb-6 text-pink-400 hover:text-pink-300 font-semibold flex items-center">← Back to Home</button>
+                        <div class="bg-gray-800 rounded-2xl shadow-xl p-8 border border-gray-700">
+                            <h2 class="text-3xl font-bold mb-8 text-center text-pink-400">Enter Access Credentials</h2>
+                            
+                            <div class="bg-red-900/50 border-l-4 border-red-500 p-4 mb-6 rounded-lg">
+                                <p class="text-xs text-red-300 leading-relaxed"><strong>⚠️ Warning:</strong> This is private content. Unauthorized use or distribution is illegal.</p>
+                            </div>
+                            
+                            <div class="mb-6">
+                                <label for="viewerAlbumId" class="block text-gray-400 font-semibold mb-2">Album ID <span class="text-red-500">*</span></label>
+                                <input type="text" id="viewerAlbumId" value="${state.albumIdToView}" oninput="state.albumIdToView=this.value.trim()" placeholder="Enter album ID" class="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-gray-200 font-mono focus:outline-none focus:ring-2 focus:ring-pink-500">
+                            </div>
+
+                            <div class="mb-8">
+                                <label for="viewerOtpInput" class="block text-gray-400 font-semibold mb-2">OTP <span class="text-red-500">*</span></label>
+                                <input type="text" id="viewerOtpInput" inputmode="numeric" maxlength="6" oninput="state.viewerOtp=this.value.trim()" placeholder="6-digit OTP" class="w-full px-4 py-4 bg-gray-700 border border-gray-600 rounded-lg text-center text-3xl font-mono text-gray-100 focus:outline-none focus:ring-2 focus:ring-pink-500 tracking-widest">
+                            </div>
+
+                            <button onclick="verify()" class="w-full bg-pink-600 text-white py-4 rounded-xl font-bold text-lg transition-all duration-300 hover:bg-pink-700 shadow-lg">
+                                Access Secure Album
+                            </button>
+                        </div>
+                    </div>
+                    ${renderFooter()}
+                </div>
+            `;
         }
 
         function renderGalleryView() {
             const exp = Date.now() > state.otpExpiry;
             const otpStatus = exp 
-                ? '<span class="text-red-600 font-bold">(Expired)</span>' 
-                : `<span class="text-green-600">(Active, Expires in: ${formatTime(state.otpExpiry)})</span>`;
+                ? '<span class="text-red-400 font-bold">(Expired)</span>' 
+                : `<span class="text-green-400 font-bold">(Active)</span>`;
+            const expiryMessage = exp ? 'Access has been revoked.' : `Expires in: ${formatTime(state.otpExpiry)}`;
 
-            let galleryContent = state.currentAlbum.photos.map((p, i) => `
+            const galleryContent = state.currentAlbum.photos.map((p, i) => `
                 <div class="relative group">
-                    <img src="${p}" onclick="openLightbox(${i})" class="w-full h-40 object-cover rounded-lg shadow-md cursor-pointer transition-all hover:scale-[1.02]">
+                    <img src="${p}" onclick="openLightbox(${i})" class="w-full h-40 object-cover rounded-lg shadow-md cursor-pointer transition-all hover:scale-[1.02] border-2 border-gray-700">
                     <button onclick="delPhoto(${i})" class="absolute top-2 right-2 bg-red-600 text-white p-2 rounded-full text-sm opacity-0 group-hover:opacity-100 transition-all hover:bg-red-700">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
                     </button>
                 </div>
             `).join('');
 
-            return `<div class="min-h-screen bg-gradient-to-br from-purple-50 to-pink-50 p-4"><div class="max-w-4xl mx-auto"><button onclick="nav('home')" class="mb-4 text-purple-600 hover:text-purple-700 font-semibold">← Back to Home</button><div class="bg-white rounded-lg shadow-xl p-8"><h2 class="text-3xl font-bold mb-4 text-center text-green-600">Album Management for ${state.currentAlbum.name}</h2>
-                <div class="grid md:grid-cols-2 gap-6 mb-8">
-                    <div class="bg-purple-50 rounded-lg p-6 border-2 border-purple-200">
-                        <h3 class="font-bold text-lg mb-4 text-purple-900 flex items-center">
-                            <svg class="w-5 h-5 mr-2 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2v5a2 2 0 01-2 2H9a2 2 0 01-2-2V9a2 2 0 012-2h6zm-2 1h-2m-2 4h4m1 4h-6"></path></svg>
-                            Album Access Details
-                        </h3>
+            return `<div class="min-h-screen pt-12"><div class="max-w-4xl mx-auto px-4"><button onclick="nav('home')" class="mb-6 text-purple-400 hover:text-purple-300 font-semibold flex items-center">← Back to Home</button><div class="bg-gray-800 rounded-2xl shadow-xl p-8 border border-gray-700"><h2 class="text-3xl font-bold mb-8 text-center text-green-400">Album: ${state.currentAlbum.name}</h2>
+                <div class="grid md:grid-cols-2 gap-8 mb-8">
+                    <div class="bg-gray-700 rounded-xl p-6 border border-purple-600/50">
+                        <h3 class="font-bold text-xl mb-4 text-purple-400 flex items-center"><svg class="w-6 h-6 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2v5a2 2 0 01-2 2H9a2 2 0 01-2-2V9a2 2 0 012-2h6zm-2 1h-2m-2 4h4m1 4h-6"></path></svg>Access Controls</h3>
                         <div class="mb-4">
-                            <label class="block text-sm font-semibold text-gray-700 mb-1">Album ID:</label>
+                            <label class="block text-sm font-semibold text-gray-400 mb-1">Album ID:</label>
                             <div class="flex gap-2">
-                                <input type="text" value="${state.currentAlbum.id}" readonly class="flex-1 px-4 py-2 border rounded-lg bg-gray-100 font-mono text-sm">
-                                <button onclick="copyText('${state.currentAlbum.id}')" class="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 font-semibold transition-colors">Copy ID</button>
+                                <input type="text" value="${state.currentAlbum.id}" readonly class="flex-1 px-3 py-2 border border-gray-600 rounded-lg bg-gray-800 font-mono text-sm text-gray-200">
+                                <button onclick="copyText('${state.currentAlbum.id}')" class="px-4 py-2 bg-purple-600 text-white rounded-lg text-sm hover:bg-purple-700">Copy ID</button>
                             </div>
                         </div>
                         <div class="mb-4">
-                            <label class="block text-sm font-semibold text-gray-700 mb-1">OTP ${otpStatus}:</label>
+                            <label class="block text-sm font-semibold text-gray-400 mb-1">OTP ${otpStatus}:</label>
                             <div class="flex gap-2">
-                                <input type="text" value="${state.otp}" readonly class="flex-1 px-4 py-2 border rounded-lg text-2xl font-mono text-center bg-green-100 border-green-300 text-green-700">
+                                <input type="text" value="${state.otp}" readonly class="flex-1 px-3 py-2 border rounded-lg text-xl font-mono text-center bg-gray-900 border-green-500/50 text-green-400">
                             </div>
+                            <p class="text-xs text-gray-500 mt-1">${expiryMessage}</p>
                         </div>
                         <div class="flex gap-2 mt-4">
-                            <button onclick="regenOTP()" class="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-semibold hover:bg-green-700 transition-colors">Regenerate OTP</button>
-                            <button onclick="expireOTP()" class="flex-1 px-4 py-2 bg-orange-600 text-white rounded-lg text-sm font-semibold hover:bg-orange-700 transition-colors">Expire Access Now</button>
+                            <button onclick="regenOTP()" class="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-semibold hover:bg-green-700">Regenerate</button>
+                            <button onclick="expireOTP()" class="flex-1 px-4 py-2 bg-orange-600 text-white rounded-lg text-sm font-semibold hover:bg-orange-700">Expire Now</button>
                         </div>
                     </div>
                     
-                    <div class="bg-red-50 rounded-lg p-6 border-2 border-red-200 flex flex-col justify-between">
+                    <div class="bg-gray-700 rounded-xl p-6 border border-red-600/50 flex flex-col justify-between">
                         <div>
-                            <h3 class="font-bold text-lg mb-4 text-red-900 flex items-center">
-                                <svg class="w-5 h-5 mr-2 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
-                                Permanent Deletion
-                            </h3>
-                            <p class="text-sm text-red-800 mb-4">You can delete individual photos or the entire album permanently. This action cannot be reversed.</p>
+                            <h3 class="font-bold text-xl mb-4 text-red-400 flex items-center"><svg class="w-6 h-6 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>Delete Album</h3>
+                            <p class="text-sm text-gray-400 mb-6">Permanently delete all photos and revoke all access. This action cannot be reversed.</p>
                         </div>
                         <button onclick="delAlbum()" class="w-full bg-red-600 text-white py-3 rounded-lg font-bold hover:bg-red-700 transition-colors">Delete Entire Album</button>
                     </div>
                 </div>
 
-                <div class="border-t pt-6">
-                    <h3 class="font-bold text-xl text-gray-800 mb-4">🖼️ Photo Gallery (${state.currentAlbum.photos.length}):</h3>
+                <div class="border-t border-gray-700 pt-6">
+                    <h3 class="font-bold text-xl text-gray-200 mb-4">🖼️ Photo Gallery (${state.currentAlbum.photos.length}):</h3>
                     <div class="grid grid-cols-2 md:grid-cols-4 gap-4">${galleryContent}</div>
                 </div>
             </div></div>${renderLightboxView()}${renderFooter()}</div>`;
@@ -180,7 +319,7 @@
             // Lightbox and Viewer logic is nested here for the authenticated view
             const lightbox = renderLightboxView();
 
-            return `<div class="min-h-screen bg-gray-900 p-4"><div class="max-w-6xl mx-auto"><button onclick="nav('viewer')" class="mb-4 text-gray-400 hover:text-white font-semibold">← Exit Album</button><div class="bg-gray-800 rounded-lg shadow-xl p-6"><h2 class="text-3xl font-bold mb-6 text-center text-pink-400">Viewing Private Album</h2><div class="bg-yellow-900 border-l-4 border-yellow-400 text-yellow-100 p-4 mb-6"><p class="font-bold">🔒 Secure View Active:</p><p class="text-sm">Screenshot, right-click, and screen capture protection is active.</p></div><div class="grid grid-cols-2 md:grid-cols-5 gap-4">${state.currentAlbum.photos.map((p,i)=>'<img src="'+p+'" onclick="openLightbox('+i+')" class="w-full h-40 object-cover rounded-lg shadow-lg cursor-pointer transition-all hover:scale-[1.05] border-2 border-gray-700">').join('')}</div></div></div>${lightbox}${renderFooter()}</div>`;
+            return `<div class="min-h-screen pt-12"><div class="max-w-6xl mx-auto px-4"><button onclick="nav('viewer')" class="mb-6 text-pink-400 hover:text-pink-300 font-semibold flex items-center">← Exit Album</button><div class="bg-gray-800 rounded-2xl shadow-xl p-6 border border-gray-700"><h2 class="text-3xl font-bold mb-6 text-center text-pink-400">Viewing Album for ${state.currentAlbum.name}</h2><div class="bg-yellow-900/50 border-l-4 border-yellow-400 text-yellow-100 p-4 mb-8 rounded-lg"><p class="font-bold">🔒 Secure View Active:</p><p class="text-sm">Screenshot, right-click, and screen capture protection is active. Do not attempt to save or share.</p></div><div class="grid grid-cols-2 md:grid-cols-5 gap-4">${state.currentAlbum.photos.map((p,i)=>'<img src="'+p+'" onclick="openLightbox('+i+')" class="w-full h-40 object-cover rounded-lg shadow-lg cursor-pointer transition-all hover:scale-[1.05] border-2 border-gray-700">').join('')}</div></div></div>${lightbox}${renderFooter()}</div>`;
         }
 
         function renderLightboxView() {
@@ -188,15 +327,17 @@
             const photo = state.currentAlbum.photos[state.lightboxIndex];
 
             return `
-                <div class="fixed inset-0 bg-black bg-opacity-95 z-50 flex items-center justify-center p-4" onclick="closeLightbox()">
-                    <button onclick="closeLightbox();event.stopPropagation()" class="absolute top-4 right-4 text-white text-4xl hover:text-gray-300 z-60">×</button>
+                <div class="fixed inset-0 bg-black bg-opacity-95 z-50 flex flex-col items-center justify-center p-4" onclick="closeLightbox()">
+                    <button onclick="closeLightbox();event.stopPropagation()" class="absolute top-4 right-4 text-white text-4xl hover:text-gray-300 z-60">
+                        <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                    </button>
                     
-                    ${state.lightboxIndex > 0 ? `<button onclick="prevPhoto();event.stopPropagation()" class="absolute left-4 text-white text-5xl hover:text-gray-300 z-60 p-4">‹</button>` : ''}
-                    ${state.lightboxIndex < state.currentAlbum.photos.length - 1 ? `<button onclick="nextPhoto();event.stopPropagation()" class="absolute right-4 text-white text-5xl hover:text-gray-300 z-60 p-4">›</button>` : ''}
+                    ${state.lightboxIndex > 0 ? `<button onclick="prevPhoto();event.stopPropagation()" class="absolute left-4 text-white text-5xl hover:text-gray-300 z-60 p-4 rounded-full bg-black/30">‹</button>` : ''}
+                    ${state.lightboxIndex < state.currentAlbum.photos.length - 1 ? `<button onclick="nextPhoto();event.stopPropagation()" class="absolute right-4 text-white text-5xl hover:text-gray-300 z-60 p-4 rounded-full bg-black/30">›</button>` : ''}
                     
-                    <img src="${photo}" class="max-w-full max-h-full object-contain rounded-lg shadow-2xl" onclick="event.stopPropagation()">
+                    <img src="${photo}" class="max-w-full max-h-[90vh] object-contain rounded-lg shadow-2xl" onclick="event.stopPropagation()">
                     
-                    <div class="absolute bottom-4 left-0 right-0 text-center text-white text-sm">
+                    <div class="mt-4 text-center text-gray-300 text-sm">
                         Photo ${state.lightboxIndex + 1} of ${state.currentAlbum.photos.length}
                     </div>
                 </div>
@@ -217,13 +358,14 @@
                 case 'home':
                     content = renderHomeView();
                     break;
-                case 'upload': // New navigation point to maintain state when navigating away from Home
+                case 'upload': 
+                    content = renderUploadView();
+                    break;
                 case 'manage':
+                    content = renderManageView();
+                    break;
                 case 'viewer':
-                    // These are now handled within renderHomeView via the homeTab state, but 
-                    // a direct nav is often treated as 'home' in single-page apps unless they 
-                    // are sub-views. For simplicity and robustness, we keep 'home' as the entry.
-                    content = renderHomeView();
+                    content = renderViewerView();
                     break;
                 case 'gallery':
                     content = renderGalleryView();
@@ -232,13 +374,11 @@
                     if (state.isVerified) {
                         content = renderViewerMode();
                     } else {
-                        // Unauthorized attempt to view 'view'
                         content = renderHomeView(); 
                     }
                     break;
                 default:
-                    // Fallback for an unknown view state
-                    content = `<div class="min-h-screen flex items-center justify-center bg-gray-100"><div class="text-center p-8 bg-white shadow-xl rounded-lg"><h2 class="text-3xl font-bold text-red-600 mb-4">Error - Unknown State</h2><p class="text-gray-700 mb-6">Navigating you back to the home page.</p><button onclick="nav('home')" class="px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 font-bold transition-colors">Go to Home</button></div></div>${renderFooter()}`;
+                    content = `<div class="min-h-screen flex items-center justify-center bg-gray-900"><div class="text-center p-8 bg-gray-800 shadow-xl rounded-lg border border-gray-700"><h2 class="text-3xl font-bold text-red-500 mb-4">Error - Unknown State</h2><p class="text-gray-400 mb-6">Navigating you back to the home page.</p><button onclick="nav('home')" class="px-6 py-3 btn-gradient-purple text-white rounded-lg font-bold transition-colors">Go to Home</button></div></div>${renderFooter()}`;
                     break;
             }
 
@@ -250,7 +390,6 @@
             if (albumId) {
                 state.albumIdToView = albumId;
                 state.view = 'viewer';
-                state.homeTab = 'viewer'; // Ensure the viewer tab is open on load
             }
             render();
         });
