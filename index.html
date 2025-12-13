@@ -8,11 +8,11 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
-        /* Define a refined shadow for the new card look */
+     
         .card-shadow {
             box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
         }
-        /* Refined, modern gradient button style */
+   
         .btn-gradient-purple {
             background: linear-gradient(135deg, #a855f7, #9333ea);
             transition: all 0.3s ease;
@@ -21,20 +21,12 @@
             background: linear-gradient(135deg, #9333ea, #7e22ce);
             transform: translateY(-1px);
         }
-        /* Custom scrollbar for gallery in viewer mode */
-        .gallery-container {
-            -ms-overflow-style: none; /* IE and Edge */
-            scrollbar-width: none; /* Firefox */
-        }
-        .gallery-container::-webkit-scrollbar {
-            display: none; /* Chrome, Safari, Opera */
-        }
     </style>
 </head>
 <body class="bg-gray-900 text-gray-200">
     <div id="app"></div>
     <script>
-        
+       
         const SUPABASE_URL = 'https://imiljivxosyrcosznklh.supabase.co';
         const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImltaWxqaXZ4b3N5cmNvc3pua2xoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQxMTIwOTcsImV4cCI6MjA3OTY4ODA5N30.TOgeuC3-RdG2ywIxDz2NWRhLHI4gxTkG4pilaZBqhso';
         
@@ -57,7 +49,7 @@
             manageEmail: ''
         };
         
-        // --- Helper Functions (Unchanged) ---
+        // --- Helper Functions ---
         function genOTP(){return Math.floor(100000+Math.random()*900000).toString()}
         function genAlbumId(){return'album_'+Math.random().toString(36).substr(2,9)}
         function formatTime(e){const r=e-Date.now(),t=Math.floor(r/36e5),n=Math.floor(r%36e5/6e4);return t+'h '+n+'m'}
@@ -68,24 +60,31 @@
         function nextPhoto(){if(state.lightboxIndex<state.currentAlbum.photos.length-1){state.lightboxIndex++;render()}}
         function prevPhoto(){if(state.lightboxIndex>0){state.lightboxIndex--;render()}}
         function handleFiles(e){const t=Array.from(e.target.files);Promise.all(t.map(e=>new Promise(t=>{const n=new FileReader();n.onload=e=>t(e.target.result);n.readAsDataURL(e)}))).then(e=>{state.photos=[...state.photos,...e];render()})}
-        function nav(e){state.view=e;if(e==='home'){state.photos=[];state.uploaderInfo={name:'',email:''};state.currentAlbum=null;state.isVerified=false;state.viewerOtp='';state.albumIdToView='';state.lightboxIndex=null;state.manageEmail='';window.history.pushState({},document.title,location.pathname)}render()}
+        function nav(e){state.view=e;if(e==='home'||e==='upload'||e==='manage'||e==='viewer'){state.photos=[];state.uploaderInfo={name:'',email:''};state.currentAlbum=null;state.isVerified=false;state.viewerOtp='';state.albumIdToView='';state.lightboxIndex=null;state.manageEmail='';window.history.pushState({},document.title,location.pathname)}render()}
 
         // --- Core Logic Functions (Abridged for brevity, original functionality retained) ---
-        async function manageAlbum(){/* ... (Original logic) ... */
+        async function manageAlbum(){
              if(!state.manageEmail){alert('Please enter your email');return}state.loading=true;render();try{const{data:albums,error}=await supabase.from('albums').select('*').eq('email',state.manageEmail.trim().toLowerCase());if(error)throw error;if(!albums||albums.length===0){alert('No albums found with this email address.');state.loading=false;render();return}if(albums.length===1){const album=albums[0];const{data:photos,error:photoError}=await supabase.from('photos').select('*').eq('album_id',album.id).order('created_at',{ascending:true});if(photoError)throw photoError;state.currentAlbum={...album,photos:photos.map(p=>p.photo_data)};state.otp=album.otp;state.otpExpiry=album.otp_expiry;state.shareLink=location.origin+location.pathname+'?album='+album.id;state.view='gallery';state.loading=false;render()}else{state.loading=false;alert('Multiple albums found. Select one:');const albumList=albums.map((a,i)=>`${i+1}. Album ID: ${a.id} (Created: ${new Date(a.created_at).toLocaleDateString()})`).join('\n');const selection=prompt(albumList+'\n\nEnter number (1-'+albums.length+'):');if(selection){const idx=parseInt(selection)-1;if(idx>=0&&idx<albums.length){const album=albums[idx];const{data:photos,error:photoError}=await supabase.from('photos').select('*').eq('album_id',album.id).order('created_at',{ascending:true});if(photoError)throw photoError;state.currentAlbum={...album,photos:photos.map(p=>p.photo_data)};state.otp=album.otp;state.otpExpiry=album.otp_expiry;state.shareLink=location.origin+location.pathname+'?album='+album.id;state.view='gallery';render()}else{alert('Invalid selection')}}}}catch(e){console.error('Manage error:',e);alert('Failed to load albums: '+e.message);state.loading=false;render()}}
-        async function upload(){/* ... (Original logic) ... */
+        
+        async function upload(){
             if(!state.uploaderInfo.name||!state.uploaderInfo.email||!state.photos.length){alert('Please fill all required fields and upload at least one photo');return}state.loading=true;render();try{const e=genAlbumId(),t=genOTP(),n=Date.now()+864e5,{data:a,error:o}=await supabase.from('albums').insert({id:e,name:state.uploaderInfo.name,email:state.uploaderInfo.email.trim().toLowerCase(),otp:t,otp_expiry:n,created_at:Date.now()}).select().single();if(o)throw o;const{error:r}=await supabase.from('photos').insert(state.photos.map(t=>({album_id:e,photo_data:t})));if(r)throw r;const{data:s,error:i}=await supabase.from('photos').select('*').eq('album_id',e);if(i)throw i;state.currentAlbum={...a,photos:s.map(e=>e.photo_data)};state.otp=t;state.otpExpiry=n;state.shareLink=location.origin+location.pathname+'?album='+e;state.view='gallery';state.loading=false;render()}catch(e){console.error('Upload error:',e);alert('Failed to create album: '+e.message);state.loading=false;render()}}
-        async function regenOTP(){/* ... (Original logic) ... */
+
+        async function regenOTP(){
             if(!state.currentAlbum)return;state.loading=true;render();try{const e=genOTP(),t=Date.now()+864e5,{error:n}=await supabase.from('albums').update({otp:e,otp_expiry:t}).eq('id',state.currentAlbum.id);if(n)throw n;state.currentAlbum.otp=e;state.otp=e;state.otpExpiry=t;state.loading=false;alert('New OTP generated successfully!');render()}catch(e){console.error('OTP error:',e);alert('Failed to regenerate OTP: '+e.message);state.loading=false;render()}}
-        async function expireOTP(){/* ... (Original logic) ... */
+        
+        async function expireOTP(){
             if(!state.currentAlbum)return;if(!confirm('Expire OTP now? This will immediately block all access to your album.'))return;state.loading=true;render();try{const e=Date.now()-1000,{error:t}=await supabase.from('albums').update({otp_expiry:e}).eq('id',state.currentAlbum.id);if(t)throw t;state.currentAlbum.otp_expiry=e;state.otpExpiry=e;state.loading=false;alert('OTP expired successfully! No one can access this album now.');render()}catch(e){console.error('Expire OTP error:',e);alert('Failed to expire OTP: '+e.message);state.loading=false;render()}}
-        async function verify(){/* ... (Original logic) ... */
+        
+        async function verify(){
             if(!state.albumIdToView||!state.viewerOtp){alert('Please enter both Album ID and OTP');return}state.loading=true;render();try{const{data:e,error:t}=await supabase.from('albums').select('*').eq('id',state.albumIdToView).single();if(t||!e){alert('Album not found. Please check your Album ID.');state.loading=false;render();return}if(Date.now()>e.otp_expiry){alert('OTP has expired. Please contact the album owner to regenerate it.');state.loading=false;render();return}if(e.otp!==state.viewerOtp){alert('Invalid OTP. Please check and try again.');state.loading=false;render();return}const{data:n,error:a}=await supabase.from('photos').select('*').eq('album_id',state.albumIdToView).order('created_at',{ascending:true});if(a)throw a;state.currentAlbum={...e,photos:n.map(e=>e.photo_data)};state.isVerified=true;state.view='view';state.loading=false;setupProtection();render()}catch(e){console.error('Verify error:',e);alert('Failed to verify album: '+e.message);state.loading=false;render()}}
-        async function delPhoto(e){/* ... (Original logic) ... */
+        
+        async function delPhoto(e){
             if(!confirm('Are you sure you want to delete this photo?'))return;state.loading=true;render();try{const{data:t,error:n}=await supabase.from('photos').select('id').eq('album_id',state.currentAlbum.id).order('created_at',{ascending:true});if(n)throw n;if(t.length===1){if(confirm('This is the last photo. Delete the entire album?')){await delAlbum();return}else{state.loading=false;render();return}}const a=t[e],{error:o}=await supabase.from('photos').delete().eq('id',a.id);if(o)throw o;state.currentAlbum.photos=state.currentAlbum.photos.filter((t,n)=>n!==e);state.loading=false;alert('Photo deleted successfully');render()}catch(e){console.error('Delete error:',e);alert('Failed to delete photo: '+e.message);state.loading=false;render()}}
-        async function delAlbum(){/* ... (Original logic) ... */
+        
+        async function delAlbum(){
             if(!confirm('Are you sure you want to delete this entire album? This action cannot be undone.'))return;state.loading=true;render();try{const{error:e}=await supabase.from('albums').delete().eq('id',state.currentAlbum.id);if(e)throw e;state.view='home';state.currentAlbum=null;state.loading=false;alert('Album deleted successfully');render()}catch(e){console.error('Delete error:',e);alert('Failed to delete album: '+e.message);state.loading=false;render()}}
-        // --- Modular Render Functions (Updated for New Design) ---
+
+        // --- Modular Render Functions (Updated) ---
 
         function renderFooter(){
             return '<footer class="bg-gray-900 border-t border-gray-700 text-gray-500 mt-16"><div class="max-w-6xl mx-auto px-4 py-8"><div class="grid md:grid-cols-3 gap-8"><div><h3 class="text-lg font-bold mb-4 text-purple-400">About Amanah</h3><p class="text-sm text-gray-400 mb-3">Created by Syed Rashad, Amanah offers a secure, controlled way to share sensitive profile photos digitally.</p><p class="text-sm text-gray-400">Protection is paramount in the digital age.</p></div><div><h3 class="text-lg font-bold mb-4 text-purple-400">Legal & Security</h3><p class="text-xs text-gray-500 leading-relaxed"><strong class="text-red-500">⚠️ Cybercrime Warning:</strong> Unauthorized misuse of photos is a criminal offense under IT Act 2000 and international cyber laws.<br/><br/><strong>Disclaimer:</strong> Use at your own risk. The platform owner is not liable for user-uploaded content or misuse.</p></div><div><h3 class="text-lg font-bold mb-4 text-purple-400">Contact</h3><p class="text-sm text-gray-400 mb-2">Email: help.amanahapp@gmail.com </p><p class="text-sm text-gray-500 mt-4">© 2024 Amanah by Syed Rashad</p></div></div><div class="border-t border-gray-800 mt-6 pt-6 text-center text-xs text-gray-600">أمانة - Trustworthy Protection</div></div></footer>';
@@ -96,7 +95,6 @@
         }
 
         function renderHomeView() {
-            // Simplified the home view to focus on the three main action cards
             const actionCard = (title, color, icon, content, buttonText, buttonAction) => `
                 <div class="bg-gray-800 rounded-2xl p-6 border border-gray-700 card-shadow transition-all duration-300 hover:border-${color}-500">
                     <div class="flex items-center mb-6">
@@ -279,12 +277,22 @@
                 <div class="grid md:grid-cols-2 gap-8 mb-8">
                     <div class="bg-gray-700 rounded-xl p-6 border border-purple-600/50">
                         <h3 class="font-bold text-xl mb-4 text-purple-400 flex items-center"><svg class="w-6 h-6 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2v5a2 2 0 01-2 2H9a2 2 0 01-2-2V9a2 2 0 012-2h6zm-2 1h-2m-2 4h4m1 4h-6"></path></svg>Access Controls</h3>
+                        
                         <div class="mb-4">
                             <label class="block text-sm font-semibold text-gray-400 mb-1">Album ID:</label>
                             <div class="flex gap-2">
                                 <input type="text" value="${state.currentAlbum.id}" readonly class="flex-1 px-3 py-2 border border-gray-600 rounded-lg bg-gray-800 font-mono text-sm text-gray-200">
                                 <button onclick="copyText('${state.currentAlbum.id}')" class="px-4 py-2 bg-purple-600 text-white rounded-lg text-sm hover:bg-purple-700">Copy ID</button>
                             </div>
+                        </div>
+
+                        <div class="mb-6">
+                            <label class="block text-sm font-semibold text-gray-400 mb-1">Shareable Link:</label>
+                            <div class="flex gap-2">
+                                <input type="text" value="${state.shareLink}" readonly class="flex-1 px-3 py-2 border border-gray-600 rounded-lg bg-gray-800 font-mono text-sm text-gray-200 truncate">
+                                <button onclick="copyText('${state.shareLink}')" class="px-4 py-2 bg-purple-600 text-white rounded-lg text-sm hover:bg-purple-700">Copy Link</button>
+                            </div>
+                            <p class="text-xs text-gray-500 mt-1">This link automatically populates the Album ID on the viewer screen.</p>
                         </div>
                         <div class="mb-4">
                             <label class="block text-sm font-semibold text-gray-400 mb-1">OTP ${otpStatus}:</label>
@@ -316,7 +324,6 @@
         }
 
         function renderViewerMode() {
-            // Lightbox and Viewer logic is nested here for the authenticated view
             const lightbox = renderLightboxView();
 
             return `<div class="min-h-screen pt-12"><div class="max-w-6xl mx-auto px-4"><button onclick="nav('viewer')" class="mb-6 text-pink-400 hover:text-pink-300 font-semibold flex items-center">← Exit Album</button><div class="bg-gray-800 rounded-2xl shadow-xl p-6 border border-gray-700"><h2 class="text-3xl font-bold mb-6 text-center text-pink-400">Viewing Album for ${state.currentAlbum.name}</h2><div class="bg-yellow-900/50 border-l-4 border-yellow-400 text-yellow-100 p-4 mb-8 rounded-lg"><p class="font-bold">🔒 Secure View Active:</p><p class="text-sm">Screenshot, right-click, and screen capture protection is active. Do not attempt to save or share.</p></div><div class="grid grid-cols-2 md:grid-cols-5 gap-4">${state.currentAlbum.photos.map((p,i)=>'<img src="'+p+'" onclick="openLightbox('+i+')" class="w-full h-40 object-cover rounded-lg shadow-lg cursor-pointer transition-all hover:scale-[1.05] border-2 border-gray-700">').join('')}</div></div></div>${lightbox}${renderFooter()}</div>`;
