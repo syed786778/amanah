@@ -129,6 +129,24 @@
         function genAlbumId(){return'album_'+Math.random().toString(36).substr(2,9)}
         function formatTime(e){const r=e-Date.now(),t=Math.floor(r/36e5),n=Math.floor(r%36e5/6e4);return t+'h '+n+'m'}
         
+        /**
+         * FIX: Missing actionCard function for renderHomeView
+         */
+        function actionCard(title, color, svgPath, text, buttonText, action) {
+            return `
+                <div class="bg-gray-800 rounded-2xl shadow-xl p-6 border border-gray-700 hover:border-${color}-500 transition-all duration-300">
+                    <div class="flex items-center mb-4">
+                        <svg class="w-8 h-8 text-${color}-400 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">${svgPath}</svg>
+                        <h3 class="text-xl font-bold text-white">${title}</h3>
+                    </div>
+                    <div class="text-gray-400 space-y-2 mb-6 text-sm">${text}</div>
+                    <button onclick="${action}" class="w-full bg-${color}-600 text-white py-3 rounded-lg font-semibold transition-all duration-300 hover:bg-${color}-700">
+                        ${buttonText}
+                    </button>
+                </div>
+            `;
+        }
+
         function createShareMessage() {
             const albumName = state.currentAlbum ? state.currentAlbum.name : 'Secured Photos';
             const link = state.shareLink;
@@ -305,7 +323,11 @@ ${state.currentAlbum.name}
         }
 
         function renderLoading(){ /* ... (omitted for brevity) ... */ return '<div class="fixed inset-0 bg-gray-900 bg-opacity-90 z-50 flex flex-col items-center justify-center"><div class="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-purple-500"></div><span class="mt-4 text-xl font-semibold text-gray-300">Processing secure request...</span></div>';}
-        function renderHomeView() { /* ... (omitted for brevity) ... */ return `<div class="min-h-screen pt-12"><div class="max-w-6xl mx-auto px-4"><div class="text-center mb-16"><svg class="w-16 h-16 text-purple-500 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg><h1 class="text-5xl font-extrabold text-white mb-2 tracking-tight">Amanah</h1><p class="text-xl text-gray-400 mb-6">Secure, Controlled Photo Sharing for Matrimony</p></div><div class="grid md:grid-cols-3 gap-8 mb-12">${actionCard('Upload Photos', 'purple', '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/>', `<p>1. Enter your details and upload photos securely.</p><p>2. Receive a unique Album ID, OTP, and shareable link.</p><p>3. Maintain full control over access and deletion.</p>`, 'Start New Upload', 'nav(\'upload\')')}${actionCard('Manage Access', 'orange', '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>', `<p>1. Enter the email used during album creation.</p><p>2. Access your security dashboard.</p><p>3. Regenerate OTP, expire access, or delete the album instantly.</p>`, 'Access Management', 'nav(\'manage\')')}${actionCard('View Album', 'pink', '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>', `<p>1. Enter the Album ID and 6-digit OTP provided by the owner.</p><p>2. View photos instantly on any device.</p><p>3. Access is secured with screenshot protection and a 24-hour expiration.</p>`, 'Enter Album ID & OTP', 'nav(\'viewer\')')}</div><div class="bg-gray-800 rounded-xl p-6 border border-gray-700"><h3 class="text-xl font-bold text-gray-200 mb-4 flex items-center"><svg class="w-6 h-6 mr-2 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/></svg>Cybercrime Warning</h3><p class="text-sm text-red-400">Unauthorized morphing, editing, misusing, or distributing photos from this platform is a criminal offense under IT Act 2000 and global cyber laws. Violators will be prosecuted.</p></div></div>${renderFooter()}</div>`;}
+        
+        function renderHomeView() { /* ... (omitted for brevity) ... */ 
+            return `<div class="min-h-screen pt-12"><div class="max-w-6xl mx-auto px-4"><div class="text-center mb-16"><svg class="w-16 h-16 text-purple-500 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg><h1 class="text-5xl font-extrabold text-white mb-2 tracking-tight">Amanah</h1><p class="text-xl text-gray-400 mb-6">Secure, Controlled Photo Sharing for Matrimony</p></div><div class="grid md:grid-cols-3 gap-8 mb-12">${actionCard('Upload Photos', 'purple', '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/>', `<p>1. Enter your details and upload photos securely.</p><p>2. Receive a unique Album ID, OTP, and shareable link.</p><p>3. Maintain full control over access and deletion.</p>`, 'Start New Upload', 'nav(\'upload\')')}${actionCard('Manage Access', 'orange', '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>', `<p>1. Enter the email used during album creation.</p><p>2. Access your security dashboard.</p><p>3. Regenerate OTP, expire access, or delete the album instantly.</p>`, 'Access Management', 'nav(\'manage\')')}${actionCard('View Album', 'pink', '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>', `<p>1. Enter the Album ID and 6-digit OTP provided by the owner.</p><p>2. View photos instantly on any device.</p><p>3. Access is secured with screenshot protection and a 24-hour expiration.</p>`, 'Enter Album ID & OTP', 'nav(\'viewer\')')}</div><div class="bg-gray-800 rounded-xl p-6 border border-gray-700"><h3 class="text-xl font-bold text-gray-200 mb-4 flex items-center"><svg class="w-6 h-6 mr-2 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/></svg>Cybercrime Warning</h3><p class="text-sm text-red-400">Unauthorized morphing, editing, misusing, or distributing photos from this platform is a criminal offense under IT Act 2000 and global cyber laws. Violators will be prosecuted.</p></div></div>${renderFooter()}</div>`;
+        }
+
         function renderUploadView() { /* ... (omitted for brevity) ... */ 
             const buttonClass = state.termsAccepted ? 'btn-gradient-purple shadow-lg' : 'btn-disabled bg-gray-600';
             return `
@@ -358,35 +380,193 @@ ${state.currentAlbum.name}
                 </div>
             `;
         }
+
         function renderManageView() { /* ... (omitted for brevity) ... */ return `<div class="min-h-screen pt-12"><div class="max-w-md mx-auto px-4"><button onclick="nav('home')" class="mb-6 text-orange-400 hover:text-orange-300 font-semibold flex items-center">← Back to Home</button><div class="bg-gray-800 rounded-2xl shadow-xl p-8 border border-gray-700"><h2 class="text-3xl font-bold mb-8 text-center text-orange-400">Access Album Management</h2><p class="text-gray-400 mb-6 text-center">Enter the email used to create the album to access controls.</p><div class="mb-8"><label for="manageEmail" class="block text-gray-400 font-semibold mb-2">Your Email <span class="text-red-500">*</span></label><input type="email" id="manageEmail" oninput="state.manageEmail=this.value" value="${state.manageEmail}" placeholder="Enter album creation email" class="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-gray-200 focus:outline-none focus:ring-2 focus:ring-orange-500"></div><button onclick="manageAlbum()" class="w-full bg-orange-600 text-white py-4 rounded-xl font-bold text-lg transition-all duration-300 hover:bg-orange-700 shadow-lg">Access Management Dashboard</button><div class="mt-6 bg-gray-700/50 border-l-4 border-orange-500 p-4 rounded-lg"><p class="text-sm text-gray-300">💡 If you have multiple albums, you will be prompted to select one.</p></div></div></div>${renderFooter()}</div>`;}
+        
         function renderViewerView() { /* ... (omitted for brevity) ... */ return `<div class="min-h-screen pt-12"><div class="max-w-md mx-auto px-4"><button onclick="nav('home')" class="mb-6 text-pink-400 hover:text-pink-300 font-semibold flex items-center">← Back to Home</button><div class="bg-gray-800 rounded-2xl shadow-xl p-8 border border-gray-700"><h2 class="text-3xl font-bold mb-8 text-center text-pink-400">Enter Access Credentials</h2><div class="bg-red-900/50 border-l-4 border-red-500 p-4 mb-6 rounded-lg"><p class="text-xs text-red-300 leading-relaxed"><strong>⚠️ Warning:</strong> This is private content. Unauthorized use or distribution is illegal.</p></div><div class="mb-6"><label for="viewerAlbumId" class="block text-gray-400 font-semibold mb-2">Album ID <span class="text-red-500">*</span></label><input type="text" id="viewerAlbumId" value="${state.albumIdToView}" oninput="state.albumIdToView=this.value.trim()" placeholder="Enter album ID" class="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-gray-200 font-mono focus:outline-none focus:ring-2 focus:ring-pink-500"></div><div class="mb-8"><label for="viewerOtpInput" class="block text-gray-400 font-semibold mb-2">OTP <span class="text-red-500">*</span></label><input type="text" id="viewerOtpInput" inputmode="numeric" maxlength="6" oninput="state.viewerOtp=this.value.trim()" placeholder="6-digit OTP" class="w-full px-4 py-4 bg-gray-700 border border-gray-600 rounded-lg text-center text-3xl font-mono text-gray-100 focus:outline-none focus:ring-2 focus:ring-pink-500 tracking-widest"></div><button onclick="verify()" class="w-full bg-pink-600 text-white py-4 rounded-xl font-bold text-lg transition-all duration-300 hover:bg-pink-700 shadow-lg">Access Album</button></div></div>${renderFooter()}</div>`;}
 
+        /**
+         * FIX: Completed renderAlbumView
+         */
         function renderAlbumView() {
             const album = state.currentAlbum;
-            const watermarkText = state.currentAlbum.name.toUpperCase() + ' - AMANAH';
+            // The logic here is for the GALLERY view (after upload or manage)
+            const isExpired = Date.now() > album.otp_expiry;
             
             return `
                 <div class="min-h-screen bg-gray-900 p-4">
                     <div class="max-w-4xl mx-auto">
-                        <button onclick="nav('home')" class="mb-4 text-pink-300 hover:text-pink-400 font-semibold">← Exit Album</button>
+                        <button onclick="nav('home')" class="mb-4 text-purple-300 hover:text-purple-400 font-semibold">← Exit Album</button>
                         
-                        <div class="bg-gray-800 rounded-lg shadow-xl p-8 relative overflow-hidden" id="viewer-content-area">
-                            <h2 class="text-3xl font-bold mb-4 text-center text-pink-400">Viewing Album: ${album.name}</h2>
-                            <p class="text-center text-gray-400 mb-6">Photos are displayed securely. Screenshot protection is active.</p>
-                            
-                            <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-                                ${album.photos.map((p, i) => `
-                                    <div class="w-full h-80 bg-gray-700 rounded-lg overflow-hidden shadow-2xl watermark-container">
-                                        <img src="${p}" alt="Profile Photo ${i}" class="w-full h-full object-contain" onclick="openLightbox(${i})" draggable="false" oncontextmenu="return false;">
-                                        <div class="watermark-overlay">${watermarkText}</div>
-                                        <div class="watermark-overlay" style="transform: translate(-50%, -150%) rotate(45deg);">${watermarkText}</div>
+                        <div class="bg-gray-800 rounded-lg shadow-xl p-8 border border-gray-700">
+                            <h2 class="text-3xl font-bold mb-3 text-purple-400">Album Management</h2>
+                            <p class="text-gray-400 mb-6">Owner: ${album.name} (${album.email}) | ID: <span class="font-mono text-sm text-gray-300">${album.id}</span></p>
+
+                            <div class="grid md:grid-cols-2 gap-6 mb-8">
+                                <div class="bg-gray-700 p-4 rounded-lg border border-purple-600">
+                                    <h3 class="font-bold text-gray-300 mb-2 flex items-center"><svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2v10a2 2 0 01-2 2H9a2 2 0 01-2-2V9a2 2 0 012-2h6zM12 5V4a2 2 0 00-2-2H8a2 2 0 00-2 2v1m12 0h-2M4 7h4"/></svg> Current OTP</h3>
+                                    <div class="flex items-center space-x-2">
+                                        <input type="text" value="${album.otp}" readonly class="copy-input w-2/3 px-3 py-2 bg-gray-800 rounded-lg text-center text-2xl font-mono text-white tracking-widest cursor-pointer" onclick="copyOtp()">
+                                        <button onclick="copyOtp()" class="bg-purple-600 hover:bg-purple-700 text-white p-2 rounded-lg transition"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 002-2h2a2 2 0 002 2m-3 7l3-3m0 0l-3-3m3 3H9"/></svg></button>
                                     </div>
+                                    <p class="text-sm mt-2 ${isExpired ? 'text-red-400' : 'text-green-400'} font-semibold">
+                                        Status: ${isExpired ? 'Expired' : 'Expires in ' + formatTime(album.otp_expiry)}
+                                    </p>
+                                </div>
+
+                                <div class="bg-gray-700 p-4 rounded-lg border border-purple-600">
+                                    <h3 class="font-bold text-gray-300 mb-2 flex items-center"><svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.808a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m7.584-1.101a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l-1.102 1.101M4 21a2 2 0 002 2h12a2 2 0 002-2V7a2 2 0 00-2-2H6a2 2 0 00-2 2v14z"/></svg> Share Link</h3>
+                                    <div class="flex items-center space-x-2">
+                                        <input type="text" value="${state.shareLink}" readonly class="copy-input w-2/3 px-3 py-2 bg-gray-800 rounded-lg text-sm text-white truncate font-mono cursor-pointer" onclick="copyLink()">
+                                        <button onclick="copyLink()" class="bg-purple-600 hover:bg-purple-700 text-white p-2 rounded-lg transition"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 002-2h2a2 2 0 002 2m-3 7l3-3m0 0l-3-3m3 3H9"/></svg></button>
+                                    </div>
+                                    <p class="text-xs text-gray-500 mt-2">Click to copy the full share link.</p>
+                                </div>
+                            </div>
+
+                            <div class="flex flex-wrap justify-center gap-4 mb-8 border-b border-gray-700 pb-8">
+                                <button onclick="regenOTP()" class="bg-blue-600 text-white py-2 px-4 rounded-lg font-semibold hover:bg-blue-700 transition flex items-center">
+                                    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11.356 6A8.001 8.001 0 0115.418 20H9v-5"/></svg>
+                                    Regenerate OTP
+                                </button>
+                                <button onclick="expireOTP()" class="bg-red-600 text-white py-2 px-4 rounded-lg font-semibold hover:bg-red-700 transition flex items-center">
+                                    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"/></svg>
+                                    Expire Access Now
+                                </button>
+                                <button onclick="shareViaWhatsApp()" class="bg-green-600 text-white py-2 px-4 rounded-lg font-semibold hover:bg-green-700 transition flex items-center">
+                                    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.893 7.893l-4 4m0 0l-4 4m4-4l4-4m-4 4l-4 4M5.636 18.364A9 9 0 013 12c0-4.97 4.03-9 9-9s9 4.03 9 9-4.03 9-9 9a9 9 0 01-6.364-2.636z"/></svg>
+                                    Share on WhatsApp
+                                </button>
+                                <button onclick="copyText()" class="bg-purple-600 text-white py-2 px-4 rounded-lg font-semibold hover:bg-purple-700 transition flex items-center">
+                                    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 002-2h2a2 2 0 002 2m-3 7l3-3m0 0l-3-3m3 3H9"/></svg>
+                                    Copy Share Text
+                                </button>
+                                <button onclick="delAlbum()" class="bg-gray-600 text-white py-2 px-4 rounded-lg font-semibold hover:bg-gray-700 transition flex items-center">
+                                    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                                    Delete Album
+                                </button>
+                            </div>
+
+                            <h3 class="text-2xl font-bold mb-6 text-gray-200">Photos (${album.photos.length})</h3>
+
+                            <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                                ${album.photos.map((p, idx) => `
+                                <div class="relative group cursor-pointer" onclick="openLightbox(${idx})">
+                                    <img src="${p}" alt="Album Photo ${idx + 1}" class="w-full h-32 object-cover rounded-lg transition duration-300 group-hover:opacity-75">
+                                    <button onclick="event.stopPropagation(); delPhoto(${idx})" class="absolute top-1 right-1 bg-red-600 text-white p-1 rounded-full opacity-0 group-hover:opacity-100 transition duration-300">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                                    </button>
+                                </div>
                                 `).join('')}
                             </div>
+                        </div>
+                    </div>
+                    ${state.lightboxIndex !== null ? renderLightbox() : ''}
+                    ${renderFooter()}
+                </div>
+            `;
+        }
+
+        // --- Render View (after OTP verification) ---
+
+        function renderView() {
+            // This view is specifically for the VIEWER, which is why setupProtection() is called before render.
+            const album = state.currentAlbum;
+            const watermarkText = album.name.toUpperCase() + ' - AMANAH';
+            
+            return `
+                <div class="min-h-screen pt-4 bg-gray-900">
+                    <div class="max-w-4xl mx-auto px-4">
+                        <div class="text-center mb-6">
+                            <h2 class="text-3xl font-extrabold text-pink-400">Viewing Secured Album</h2>
+                            <p class="text-gray-400">Shared by: ${album.name}</p>
+                        </div>
+                        
+                        <div id="viewer-content-area" class="relative">
+                            <div class="watermark-overlay">${watermarkText}</div>
                             
-                            <div class="mt-8 p-4 bg-red-800 rounded-lg text-center text-red-200">
-                                <p class="font-bold text-lg">SECURITY LOCKDOWN</p>
-                                <p class="text-sm">DO NOT SHARE, FORWARD, OR SCREENSHOT THESE PHOTOS. Access is temporary and monitored.</p>
+                            <div class="grid grid-cols-1 gap-6">
+                                ${album.photos.map((p, idx) => `
+                                <div class="bg-gray-800 rounded-lg shadow-xl overflow-hidden relative border border-pink-700">
+                                    <img src="${p}" alt="Secured Photo ${idx + 1}" 
+                                         class="w-full object-contain max-h-[90vh] mx-auto block"
+                                         draggable="false" oncontextmenu="return false;" oncopy="return false;" oncut="return false;" style="user-select: none;">
+                                    <div class="absolute inset-0 bg-black opacity-0 hover:opacity-10 transition duration-300 pointer-events-none"></div>
+                                </div>
+                                `).join('')}
+                            </div>
+                        </div>
+                        
+                        <div class="mt-8 bg-red-900/50 border-l-4 border-red-500 p-4 rounded-lg text-center">
+                            <p class="text-sm text-red-300 font-bold">⚠️ SECURITY MEASURES ACTIVE</p>
+                            <p class="text-xs text-red-300">Screenshot, saving, and printing are disabled. Access expires in ${formatTime(album.otp_expiry)}.</p>
+                        </div>
+
+                        <button onclick="nav('home')" class="w-full mt-6 bg-gray-700 text-white py-3 rounded-xl font-bold hover:bg-gray-600 transition">Close & Exit</button>
+                    </div>
+                    ${renderFooter()}
+                </div>
+            `;
+        }
+
+        function renderLightbox() {
+            const photo = state.currentAlbum.photos[state.lightboxIndex];
+            if (!photo) return '';
+            const watermarkText = state.currentAlbum.name.toUpperCase() + ' - AMANAH';
+
+            return `
+                <div class="fixed inset-0 bg-black bg-opacity-90 z-50 flex items-center justify-center p-4" onclick="closeLightbox()">
+                    <div class="relative max-w-full max-h-full" onclick="event.stopPropagation()">
+                        <div class="watermark-container">
+                            <img src="${photo}" alt="Lightbox Photo" 
+                                class="max-w-full max-h-[90vh] object-contain rounded-lg shadow-2xl"
+                                draggable="false" oncontextmenu="return false;" oncopy="return false;" oncut="return false;" style="user-select: none;">
+                            <div class="watermark-overlay">${watermarkText}</div>
+                        </div>
+
+                        <button onclick="closeLightbox()" class="absolute top-4 right-4 text-white bg-black bg-opacity-50 hover:bg-opacity-75 rounded-full p-2 z-50">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                        </button>
+                        
+                        ${state.lightboxIndex > 0 ? `
+                        <button onclick="prevPhoto(); event.stopPropagation();" class="absolute left-4 top-1/2 transform -translate-y-1/2 text-white bg-black bg-opacity-50 hover:bg-opacity-75 rounded-full p-3 z-50">
+                            <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
+                        </button>` : ''}
+                        ${state.lightboxIndex < state.currentAlbum.photos.length - 1 ? `
+                        <button onclick="nextPhoto(); event.stopPropagation();" class="absolute right-4 top-1/2 transform -translate-y-1/2 text-white bg-black bg-opacity-50 hover:bg-opacity-75 rounded-full p-3 z-50">
+                            <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+                        </button>` : ''}
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderTermsView() {
+            return `
+                <div class="min-h-screen pt-12">
+                    <div class="max-w-3xl mx-auto px-4">
+                        <button onclick="nav('home')" class="mb-6 text-purple-400 hover:text-purple-300 font-semibold flex items-center">← Back to Home</button>
+                        <div class="bg-gray-800 rounded-2xl shadow-xl p-8 border border-gray-700">
+                            <h2 class="text-3xl font-bold mb-6 text-purple-400 border-b border-gray-700 pb-4">Terms & Conditions (Amanah)</h2>
+                            <div class="prose prose-invert text-gray-300 max-w-none space-y-4">
+                                <p class="text-red-400 font-bold">BY UPLOADING OR VIEWING PHOTOS, YOU EXPLICITLY AGREE TO THESE TERMS.</p>
+                                
+                                <h3>1. Content Ownership and Responsibility</h3>
+                                <p>You, the Uploader, affirm that you hold all rights to the photos you upload. You assume sole legal responsibility for the content, including its legality and any subsequent consequences of its unauthorized distribution or misuse, even with the platform's security measures in place.</p>
+                                
+                                <h3>2. Security Disclaimer</h3>
+                                <p>Amanah implements measures to deter unauthorized saving and sharing (e.g., anti-screenshot, watermarking, OTP). However, no digital security is 100% foolproof. The platform owner is not liable for any successful circumventing of these security measures by viewers or any third party.</p>
+
+                                <h3>3. Misuse and Cybercrime Warning</h3>
+                                <p>Any attempt to morph, edit, misuse, or distribute photos accessed via this platform is illegal. Violators are subject to prosecution under applicable cyber laws (e.g., India's IT Act 2000, and equivalent global legislation).</p>
+                                
+                                <h3>4. Data Handling (Base64 Storage)</h3>
+                                <p>Photos are stored in your Supabase database as Base64 strings, not as standard files in a public storage bucket. This is to prevent direct public URL access. You acknowledge that storing large files as Base64 impacts database size and query performance, and the platform owner is not responsible for any associated costs or performance issues on your Supabase instance.</p>
+
+                                <h3>5. Termination</h3>
+                                <p>The Uploader retains the right to delete the album and all associated photos and access data at any time via the Management Dashboard.</p>
+
+                                <p class="text-sm text-gray-500 mt-6">Last Updated: October 2024</p>
                             </div>
                         </div>
                     </div>
@@ -394,65 +574,73 @@ ${state.currentAlbum.name}
                 </div>
             `;
         }
-        
-        function renderLightbox() {
-            if (state.lightboxIndex === null) return '';
-            const photo = state.currentAlbum.photos[state.lightboxIndex];
-            const watermarkText = state.currentAlbum.name.toUpperCase() + ' - AMANAH';
-            
-            return `
-                <div class="fixed inset-0 bg-gray-900 bg-opacity-95 z-50 flex items-center justify-center p-4" id="viewer-content-area">
-                    <button onclick="closeLightbox()" class="absolute top-4 right-4 text-white text-3xl font-bold z-50 hover:text-pink-400 transition-colors">×</button>
-                    
-                    <div class="relative max-w-full max-h-full watermark-container">
-                        <img src="${photo}" class="max-w-full max-h-[90vh] object-contain" draggable="false" oncontextmenu="return false;">
-                        <div class="watermark-overlay" style="font-size: 5vw;">${watermarkText}</div>
-                        <div class="watermark-overlay" style="transform: translate(-50%, -150%) rotate(45deg); font-size: 5vw;">${watermarkText}</div>
-                        <div class="watermark-overlay" style="transform: translate(-50%, 50%) rotate(45deg); font-size: 5vw;">${watermarkText}</div>
-                    </div>
-
-                    <button onclick="prevPhoto()" class="absolute left-4 top-1/2 -translate-y-1/2 text-white text-4xl p-2 rounded-full bg-black/50 hover:bg-black/70 transition-colors z-50 ${state.lightboxIndex === 0 ? 'opacity-30 cursor-not-allowed' : ''}">&#10094;</button>
-                    <button onclick="nextPhoto()" class="absolute right-4 top-1/2 -translate-y-1/2 text-white text-4xl p-2 rounded-full bg-black/50 hover:bg-black/70 transition-colors z-50 ${state.lightboxIndex === state.currentAlbum.photos.length - 1 ? 'opacity-30 cursor-not-allowed' : ''}">&#10095;</button>
-                </div>
-            `;
-        }
-
-        function renderTermsView() { /* ... (omitted for brevity) ... */ return `<div class="min-h-screen pt-12"><div class="max-w-4xl mx-auto px-4"><button onclick="nav('home')" class="mb-6 text-purple-400 hover:text-purple-300 font-semibold flex items-center">← Back to Home</button><div class="bg-gray-800 rounded-2xl shadow-xl p-8 border border-gray-700"><h2 class="text-3xl font-bold mb-8 text-center text-purple-400">Terms & Conditions (Amanah)</h2><p class="text-gray-400 mb-6">Last Updated: October 2024</p><div class="space-y-4 text-gray-300"><h3 class="text-xl font-bold text-red-400">1. Cybercrime Warning and Content Liability</h3><p><strong>1.1. Absolute Prohibition:</strong> Any unauthorized morphing, editing, misusing, duplicating, or distributing photos accessed via Amanah is a criminal offense under the IT Act 2000 (India) and applicable global cyber laws, including the misuse of personal images and identity theft. Violators will be reported to law enforcement and prosecuted to the fullest extent of the law.</p><p><strong>1.2. User Liability:</strong> The person who uploads the content is solely and legally responsible for the content uploaded, its permissions, and its truthfulness. The platform owner (**Syed Rashad**) is not liable for any content uploaded by users or its subsequent misuse by the recipient.</p><h3 class="text-xl font-bold text-purple-400">2. Service and Security Disclaimer</h3><p><strong>2.1. Best-Effort Security:</strong> While Amanah implements multiple security layers (OTP, unique share links, digital watermarks, and browser-level screenshot protection), users must acknowledge that **no web-based security measure is 100% foolproof** against dedicated technical attempts (e.g., using external hardware to photograph the screen).</p><p><strong>2.2. Data Deletion:</strong> The user must manage their album access. The album owner can regenerate the OTP, expire access, or delete the album/photos at any time via the Management dashboard.</p><p><strong>2.3. Platform Disclaimer:</strong> The service is provided "as is" without warranty of any kind. Use of this platform is entirely at the user's own risk.</p><h3 class="text-xl font-bold text-purple-400">3. Access & OTP Usage</h3><p><strong>3.1. OTP Expiry:</strong> All OTPs expire automatically after 24 hours of generation.</p><p><strong>3.2. Termination:</strong> Access can be revoked instantly by the album owner via the Management dashboard.</p></div></div></div>${renderFooter()}</div>`;}
 
 
-        function render(){
+        // --- Main Render Loop & Initializer ---
+
+        function render() {
             const app = document.getElementById('app');
-            if(state.loading) {
-                app.innerHTML = renderLoading();
-                return;
+            let content = '';
+
+            // Handle the URL parameter for direct album viewing
+            if (!state.albumIdToView && location.search.includes('?album=')) {
+                const urlParams = new URLSearchParams(location.search);
+                const albumId = urlParams.get('album');
+                if (albumId) {
+                    state.albumIdToView = albumId;
+                    state.view = 'viewer';
+                    // Clear the URL to prevent re-verification on refresh unless manually entered
+                    window.history.replaceState({}, document.title, location.pathname);
+                }
             }
-            
-            let html = '';
-            if(state.view === 'home') html = renderHomeView();
-            else if(state.view === 'upload') html = renderUploadView();
-            else if(state.view === 'manage') html = renderManageView();
-            else if(state.view === 'viewer') html = renderViewerView();
-            else if(state.view === 'view') html = renderAlbumView() + renderLightbox();
-            else if(state.view === 'terms') html = renderTermsView();
 
-            app.innerHTML = html;
+            switch (state.view) {
+                case 'home':
+                    content = renderHomeView();
+                    break;
+                case 'upload':
+                    content = renderUploadView();
+                    break;
+                case 'manage':
+                    content = renderManageView();
+                    break;
+                case 'viewer':
+                    content = renderViewerView();
+                    break;
+                case 'gallery':
+                    // This is the management view after the owner logs in
+                    content = renderAlbumView();
+                    break;
+                case 'view':
+                    // This is the viewing gallery after OTP verification
+                    content = renderView();
+                    break;
+                case 'terms':
+                    content = renderTermsView();
+                    break;
+                default:
+                    content = renderHomeView();
+            }
 
-            // Re-apply protection only if the view is 'view' (album unlocked)
+            if (state.loading) {
+                content = renderLoading() + content;
+            }
+
+            app.innerHTML = content;
+
+            // Re-apply protection logic after rendering the view if needed
             if (state.view === 'view') {
-                setupProtection();
+                 // Defer to allow the DOM to update before adding listeners
+                setTimeout(setupProtection, 100); 
             }
         }
 
-        window.addEventListener('DOMContentLoaded', () => { 
-            const e = new URLSearchParams(window.location.search).get('album');
-            if (e) {
-                state.albumIdToView = e;
-                state.view = 'viewer';
-            }
+        // Initial render on page load
+        document.addEventListener('DOMContentLoaded', () => {
+            // Check if a view is set in the URL (handled inside render)
             render();
         });
 
-        window.addEventListener('load', render);
     </script>
 </body>
 </html>
