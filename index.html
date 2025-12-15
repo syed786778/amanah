@@ -177,11 +177,21 @@
             render();
         }
         
+        // ** IMPROVEMENT 1: NON-RENDERING INPUT UPDATES **
+        // New function for updating Album ID input without calling render()
+        function updateAlbumId(input) {
+            state.albumIdToView = input.value;
+        }
+
+        // New function for updating OTP input without calling render()
+        function updateViewerOtp(input) {
+            state.viewerOtp = input.value;
+        }
+
         // --- SCREENSHOT & SECURITY HANDLERS ---
         
         /**
-         * NEW: Scrambles the canvas pixels immediately when a screenshot attempt is detected.
-         * This ensures the user captures a distorted image, not the actual photo.
+         * Scrambles the canvas pixels immediately when a screenshot attempt is detected.
          */
         function scrambleCanvasPixels() {
             const photoIndex = state.lightboxIndex !== null ? state.lightboxIndex : 0;
@@ -189,24 +199,20 @@
             if (!canvas) return;
 
             const ctx = canvas.getContext('2d');
-            const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-            const data = imageData.data;
-
-            // Simple block-level scrambling/inversion
-            for (let i = 0; i < data.length; i += 4) {
-                // Invert the colors
-                data[i] = 255 - data[i];     // Red
-                data[i + 1] = 255 - data[i + 1]; // Green
-                data[i + 2] = 255 - data[i + 2]; // Blue
-                // Keep Alpha (data[i + 3])
-                
-                // Add block noise by setting blocks of pixels to black/white randomly
-                if (Math.random() < 0.05) {
-                    data[i] = data[i+1] = data[i+2] = Math.random() > 0.5 ? 0 : 255;
-                }
-            }
             
-            ctx.putImageData(imageData, 0, 0);
+            // Create a completely black or white overlay, which is faster and more effective than scrambling
+            ctx.fillStyle = Math.random() > 0.5 ? 'rgba(0,0,0,1)' : 'rgba(255,255,255,1)'; 
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // Add massive distortion text on top
+            ctx.save();
+            ctx.fillStyle = 'rgba(255, 0, 0, 0.7)';
+            ctx.font = 'bold 300px Arial'; 
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText('ACCESS DENIED', canvas.width / 2, canvas.height / 2);
+            ctx.restore();
+
             console.log('⚡ Canvas Scrambled!');
         }
 
@@ -236,7 +242,6 @@
         }
 
         function showScreenshotWarning() {
-            // No scrambling here, only for key/blur events
             alert('⚠️ Screenshots and screen recording are strictly prohibited!\n\nThis action has been logged and may result in restricted access.');
             state.screenshotAttempts++;
             
@@ -275,7 +280,7 @@
             document.addEventListener('contextmenu', contextMenuBlocker);
             document.addEventListener('keydown', keyBlocker);
 
-            // 2. Mobile Screenshot Detection via Visibility API
+            // 2. Mobile Screenshot Detection via Visibility API (Retained for robustness)
             const handleVisibilityChange = () => {
                 const now = Date.now();
                 const timeSinceLastChange = now - lastVisibilityChange;
@@ -298,7 +303,7 @@
 
             document.addEventListener('visibilitychange', handleVisibilityChange);
 
-            // 3. HARDENED: Page blur/focus detection (Most reliable mobile quick-block)
+            // 3. HARDENED: Page blur/focus detection (Most reliable mobile quick-block/screenshot utility detection)
             let blurStartTime = 0;
             
             window.addEventListener('blur', () => {
@@ -318,7 +323,7 @@
             });
         }
         
-        // --- CANVAS RENDERING (Image Protection & Subtle Watermark) ---
+        // --- CANVAS RENDERING (Image Protection & Enhanced Watermark) ---
         
         function drawPhotoOnCanvas(canvasId, photoData, watermarkText) {
             const canvas = document.getElementById(canvasId);
@@ -340,13 +345,13 @@
                 // 1. Draw the actual photo
                 ctx.drawImage(img, 0, 0, img.width, img.height);
                 
-                // 2. Draw the SUBTLE Watermark
+                // 2. Draw the SUBTLE Watermark (Enhanced Visibility)
                 ctx.save();
-                ctx.globalAlpha = 0.03; // IMPROVED: Reduced opacity for better viewing
+                ctx.globalAlpha = 0.15; // IMPROVED: Increased opacity from 0.03 to 0.15 for better screenshot deterrent
                 ctx.fillStyle = 'white';
                 
-                // Dynamically size the watermark based on canvas width
-                const watermarkSize = Math.max(150, canvas.width / 10);
+                // Dynamically size the watermark based on canvas width (make it massive)
+                const watermarkSize = Math.max(250, canvas.width / 8);
                 ctx.font = `bold ${watermarkSize}px Arial`; 
                 
                 ctx.textAlign = 'center';
@@ -359,20 +364,14 @@
                 // Rotate by -45 degrees
                 ctx.translate(centerX, centerY);
                 ctx.rotate(-45 * Math.PI / 180);
+                
+                // Draw the main text
                 ctx.fillText(watermarkText || 'Amanah Secured', 0, 0);
                 
-                ctx.restore();
-                
-                // Draw a second, slightly offset watermark for robustness (still very subtle)
-                ctx.save();
-                ctx.globalAlpha = 0.02; 
-                ctx.fillStyle = 'gray';
-                ctx.font = `bold ${watermarkSize * 0.9}px Arial`; 
-                ctx.textAlign = 'center';
-                ctx.textBaseline = 'middle';
-                ctx.translate(centerX + 10, centerY + 10);
-                ctx.rotate(-45 * Math.PI / 180);
-                ctx.fillText(watermarkText || 'Amanah Secured', 0, 0);
+                // Draw a secondary, slightly darker shadow text (for greater visibility on light areas)
+                ctx.globalAlpha = 0.10; 
+                ctx.fillStyle = 'black';
+                ctx.fillText(watermarkText || 'Amanah Secured', 5, 5);
 
                 ctx.restore();
             };
@@ -471,6 +470,7 @@
             if(!state.currentAlbum)return;if(!confirm('Expire OTP now? This will immediately block all access to your album.'))return;state.loading=true;render();try{const e=Date.now()-1000,{error:t}=await supabase.from('albums').update({otp_expiry:e}).eq('id',state.currentAlbum.id);if(t)throw t;state.currentAlbum.otp_expiry=e;state.otpExpiry=e;state.loading=false;alert('OTP expired successfully! No one can access this album now.');render()}catch(e){console.error('Expire OTP error:',e);alert('Failed to expire OTP: '+e.message);state.loading=false;render()}}
         
         async function verify(){
+            // Verify logic runs after all input is gathered
             if(!state.albumIdToView||!state.viewerOtp){alert('Please enter both Album ID and OTP');return}state.loading=true;render();try{const{data:e,error:t}=await supabase.from('albums').select('*').eq('id',state.albumIdToView).single();if(t||!e){alert('Album not found. Please check your Album ID.');state.loading=false;render();return}if(Date.now()>e.otp_expiry){alert('OTP has expired. Please contact the album owner to regenerate it.');state.loading=false;render();return}if(e.otp!==state.viewerOtp){alert('Invalid OTP. Please check and try again.');state.loading=false;render();return}const{data:n,error:a}=await supabase.from('photos').select('*').eq('album_id',state.albumIdToView).order('created_at',{ascending:true});if(a)throw a;state.currentAlbum={...e,photos:n.map(e=>e.photo_data)};state.isVerified=true;state.view='view';state.loading=false;render();setTimeout(setupProtection,100);}catch(e){console.error('Verify error:',e);alert('Failed to verify album: '+e.message);state.loading=false;render()}}
         
         async function delPhoto(e){
@@ -496,8 +496,7 @@
                                     Amanah was conceived by <strong>Syed Rashad</strong> out of a genuine need for digital security in sensitive, private matters like matrimonial profile sharing.
                                 </p>
                                 <p class="text-xs text-gray-500 leading-relaxed">
-                                    Syed applies his operational expertise and customer-centric approach as a Senior Manager at a WealthTech firm. Alongside his full-time role, he advises early-stage startups in the wealth management space on operations, compliance, and customer experience. 
-                                    He is also passionate about building Amanah as a focused initiative in the secure and controlled photo-sharing space, driven by a strong emphasis on trust, consent, and responsible usage.
+                                    Syed applies his operational expertise and commitment to excellent customer experience as a Senior Manager at a WealthTech firm.
                                 </p>
                             </div>
                             <div>
@@ -538,7 +537,8 @@
         }
         
         function renderVerifyView() {
-            return `<div class="min-h-screen pt-12"><div class="max-w-md mx-auto px-4"><h2 class="text-3xl font-bold mb-8 text-white text-center">👁️ View Shared Photos</h2><div class="bg-gray-800 rounded-xl p-8 card-shadow border border-gray-700"><p class="text-gray-400 mb-6 text-center">Enter the Album ID and OTP provided by the sender.</p><div class="mb-6"><label class="block text-gray-300 font-semibold mb-2" for="albumIdToView">Album ID (e.g., album_xxxxxx)</label><input type="text" id="albumIdToView" value="${state.albumIdToView}" oninput="state.albumIdToView=this.value;render()" class="w-full p-3 rounded-lg bg-gray-700 border border-gray-600 text-white focus:ring-green-500 focus:border-green-500" placeholder="album_xxxxxx"></div><div class="mb-6"><label class="block text-gray-300 font-semibold mb-2" for="viewerOtp">One-Time Passcode (OTP)</label><input type="text" id="viewerOtp" value="${state.viewerOtp}" oninput="state.viewerOtp=this.value;render()" class="w-full p-3 rounded-lg bg-gray-700 border border-gray-600 text-white focus:ring-green-500 focus:border-green-500" placeholder="000000" maxlength="6"></div><button onclick="verify()" class="w-full py-4 text-white rounded-lg font-bold ${!state.albumIdToView || !state.viewerOtp ? 'btn-disabled' : 'btn-gradient-purple'}" ${!state.albumIdToView || !state.viewerOtp ? 'disabled' : ''}>${state.loading?'<div class="animate-spin rounded-full h-6 w-6 border-b-2 border-white mx-auto"></div>':'Verify & View Album'}</button></div></div></div>${renderFooter()}`;
+            // NOTE: The oninput for viewerOtp and albumIdToView now calls updateViewerOtp/updateAlbumId instead of render()
+            return `<div class="min-h-screen pt-12"><div class="max-w-md mx-auto px-4"><h2 class="text-3xl font-bold mb-8 text-white text-center">👁️ View Shared Photos</h2><div class="bg-gray-800 rounded-xl p-8 card-shadow border border-gray-700"><p class="text-gray-400 mb-6 text-center">Enter the Album ID and OTP provided by the sender.</p><div class="mb-6"><label class="block text-gray-300 font-semibold mb-2" for="albumIdToView">Album ID (e.g., album_xxxxxx)</label><input type="text" id="albumIdToView" value="${state.albumIdToView}" oninput="updateAlbumId(this)" class="w-full p-3 rounded-lg bg-gray-700 border border-gray-600 text-white focus:ring-green-500 focus:border-green-500" placeholder="album_xxxxxx"></div><div class="mb-6"><label class="block text-gray-300 font-semibold mb-2" for="viewerOtp">One-Time Passcode (OTP)</label><input type="text" id="viewerOtp" value="${state.viewerOtp}" oninput="updateViewerOtp(this)" class="w-full p-3 rounded-lg bg-gray-700 border border-gray-600 text-white focus:ring-green-500 focus:border-green-500" placeholder="000000" maxlength="6"></div><button onclick="verify()" class="w-full py-4 text-white rounded-lg font-bold ${!state.albumIdToView || !state.viewerOtp ? 'btn-disabled' : 'btn-gradient-purple'}" ${!state.albumIdToView || !state.viewerOtp ? 'disabled' : ''}>${state.loading?'<div class="animate-spin rounded-full h-6 w-6 border-b-2 border-white mx-auto"></div>':'Verify & View Album'}</button></div></div></div>${renderFooter()}`;
         }
         
         function renderViewerPhoto(photo, index) {
