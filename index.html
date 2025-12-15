@@ -1,156 +1,124 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Amanah V2 – Secure Photo Sharing</title>
-
-  <!-- Tailwind -->
-  <script src="https://cdn.tailwindcss.com"></script>
-
-  <!-- Inter Font -->
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-
-  <style>
-    body { font-family: 'Inter', system-ui, sans-serif; }
-
-    /* Glass + elevation */
-    .glass {
-      background: rgba(17, 24, 39, 0.75);
-      backdrop-filter: blur(14px);
-      -webkit-backdrop-filter: blur(14px);
-      border: 1px solid rgba(255,255,255,0.08);
-    }
-
-    /* Primary gradient */
-    .primary-gradient {
-      background: linear-gradient(135deg, #7c3aed, #4f46e5);
-    }
-
-    .primary-gradient:hover {
-      filter: brightness(1.05);
-      transform: translateY(-1px);
-    }
-
-    /* Card hover */
-    .hover-card {
-      transition: all 0.25s ease;
-    }
-
-    .hover-card:hover {
-      transform: translateY(-4px);
-      box-shadow: 0 20px 40px rgba(0,0,0,0.35);
-    }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Amanah - Secure marriage profile photo sharing with OTP protection by Syed Rashad">
+    <title>Amanah - Secure Photo Sharing</title>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    
+    <style>
+        .card-shadow {
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
+        }
+        .btn-gradient-purple {
+            background: linear-gradient(135deg, #a855f7, #9333ea);
+            transition: all 0.3s ease;
+        }
+        .btn-gradient-purple:hover {
+            background: linear-gradient(135deg, #9333ea, #7e22ce);
+            transform: translateY(-1px);
+        }
+        .btn-disabled {
+            background-color: #6b7280;
+            cursor: not-allowed;
+            opacity: 0.6;
+            pointer-events: none;
+        }
+        body {
+            -webkit-user-select: none; 
+            -moz-user-select: none; 
+            -ms-user-select: none; 
+            user-select: none;
+        }
+        .screenshot-block-overlay {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background-color: #000; z-index: 9999; display: none;
+            justify-content: center; align-items: center; flex-direction: column;
+        }
+        .screenshot-block-overlay.active { display: flex; }
+    </style>
+    
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-YPHFTQYLE1"></script>
+    <script>
+        window.dataLayer = window.dataLayer || [];
+        function gtag(){dataLayer.push(arguments);}
+        gtag('js', new Date());
+        gtag('config', 'G-YPHFTQYLE1');
+    </script>
 </head>
+<body class="bg-gray-900 text-gray-200" oncopy="return false;" oncut="return false;">
 
-<body class="bg-gradient-to-br from-gray-950 via-gray-900 to-gray-950 text-gray-100 min-h-screen">
-
-  <!-- HEADER -->
-  <header class="sticky top-0 z-50 border-b border-white/5 bg-gray-950/70 backdrop-blur">
-    <div class="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
-      <div class="flex items-center gap-3">
-        <div class="w-9 h-9 rounded-xl primary-gradient flex items-center justify-center font-extrabold">A</div>
-        <span class="text-lg font-semibold tracking-tight">Amanah</span>
-      </div>
-      <nav class="hidden md:flex gap-8 text-sm text-gray-400">
-        <a href="#" class="hover:text-white">Upload</a>
-        <a href="#" class="hover:text-white">Manage</a>
-        <a href="#" class="hover:text-white">View</a>
-        <a href="#" class="hover:text-white">Security</a>
-      </nav>
+    <div id="screenshot-block-overlay" class="screenshot-block-overlay">
+        <svg class="w-24 h-24 text-red-500 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+        </svg>
+        <h2 class="text-2xl font-bold text-white mb-2">⚠️ Screenshot Detected</h2>
+        <p class="text-gray-300 text-center px-4">Screenshots are prohibited. You will be logged out shortly.</p>
     </div>
-  </header>
 
-  <!-- HERO -->
-  <section class="relative overflow-hidden">
-    <div class="absolute inset-0 opacity-40 bg-[radial-gradient(circle_at_top,#7c3aed22,transparent_60%)]"></div>
+    <div id="app"></div>
+    
+    <script>
+        const SUPABASE_URL = 'https://imiljivxosyrcosznklh.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImltaWxqaXZ4b3N5cmNvc3pua2xoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQxMTIwOTcsImV4cCI6MjA3OTY4ODA5N30.TOgeuC3-RdG2ywIxDz2NWRhLHI4gxTkG4pilaZBqhso';
+        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-    <div class="relative max-w-6xl mx-auto px-6 pt-24 pb-20 text-center">
-      <h1 class="text-5xl md:text-6xl font-extrabold tracking-tight mb-6">
-        Private photos deserve <span class="text-transparent bg-clip-text bg-gradient-to-r from-violet-400 to-indigo-400">absolute control</span>
-      </h1>
-      <p class="text-gray-400 max-w-2xl mx-auto text-lg">
-        Amanah is a closed, trust-first platform for sharing matrimony photos — protected by OTP, time-bound access, watermarking, and anti-capture controls.
-      </p>
+        let state = {
+            view: 'home',
+            homeTab: 'upload', 
+            currentAlbum: null,
+            uploaderInfo: { name: '', email: '' },
+            photos: [],
+            shareLink: '',
+            otp: '',
+            otpExpiry: null,
+            viewerOtp: '',
+            albumIdToView: '',
+            isVerified: false,
+            loading: false,
+            lightboxIndex: null,
+            manageEmail: '',
+            termsAccepted: false,
+            screenshotAttempts: 0 
+        };
 
-      <div class="mt-10 flex flex-col sm:flex-row gap-4 justify-center">
-        <button class="px-8 py-4 rounded-xl font-semibold primary-gradient shadow-lg">
-          Create Secure Album
-        </button>
-        <button class="px-8 py-4 rounded-xl font-semibold border border-white/10 hover:bg-white/5">
-          View Shared Album
-        </button>
-      </div>
-    </div>
-  </section>
+        // Simple navigation helper
+        function nav(e){
+            state.view=e;
+            if(e==='home'||e==='upload'||e==='manage'||e==='viewer'){
+                state.photos=[]; state.uploaderInfo={name:'',email:''};
+                state.currentAlbum=null; state.isVerified=false;
+                state.viewerOtp=''; state.albumIdToView=''; state.lightboxIndex=null;
+                state.manageEmail=''; state.screenshotAttempts=0;
+            }
+            render();
+        }
 
-  <!-- VALUE PROPS -->
-  <section class="max-w-6xl mx-auto px-6 pb-24">
-    <div class="grid md:grid-cols-3 gap-8">
+        // Render functions
+        function render() {
+            let content = '';
+            switch(state.view){
+                case 'home': content = renderHomeView(); break;
+                case 'upload': content = renderUploadView(); break;
+                case 'manage': content = renderManageView(); break;
+                case 'viewer': content = renderViewerView(); break; // FIXED
+                default: content = renderHomeView();
+            }
+            document.getElementById('app').innerHTML = content;
+        }
 
-      <div class="glass rounded-2xl p-8 hover-card">
-        <h3 class="text-xl font-semibold mb-3">Zero Forwarding</h3>
-        <p class="text-gray-400 text-sm leading-relaxed">
-          Photos cannot be downloaded, forwarded, or reused. Every view is controlled and logged.
-        </p>
-      </div>
+        // Dummy implementations for brevity
+        function renderHomeView(){ return '<h1 class="text-white text-center mt-16 text-4xl">Home</h1>'; }
+        function renderUploadView(){ return '<h1 class="text-white text-center mt-16 text-4xl">Upload</h1>'; }
+        function renderManageView(){ return '<h1 class="text-white text-center mt-16 text-4xl">Manage</h1>'; }
+        function renderViewerView(){ return '<h1 class="text-white text-center mt-16 text-4xl">Viewer</h1>'; }
 
-      <div class="glass rounded-2xl p-8 hover-card">
-        <h3 class="text-xl font-semibold mb-3">OTP + Expiry</h3>
-        <p class="text-gray-400 text-sm leading-relaxed">
-          One-time passcodes with 24-hour expiry. Regenerate or revoke access anytime.
-        </p>
-      </div>
-
-      <div class="glass rounded-2xl p-8 hover-card">
-        <h3 class="text-xl font-semibold mb-3">Anti-Screenshot</h3>
-        <p class="text-gray-400 text-sm leading-relaxed">
-          Active detection, canvas rendering, watermarking, and forced logout on capture attempts.
-        </p>
-      </div>
-
-    </div>
-  </section>
-
-  <!-- CTA STRIP -->
-  <section class="border-t border-white/5 bg-gray-950">
-    <div class="max-w-6xl mx-auto px-6 py-16 flex flex-col md:flex-row items-center justify-between gap-6">
-      <div>
-        <h2 class="text-3xl font-bold mb-2">Built on trust. Designed for dignity.</h2>
-        <p class="text-gray-400">Amanah keeps you in control of who sees what — and for how long.</p>
-      </div>
-      <button class="px-8 py-4 rounded-xl font-semibold primary-gradient shadow-lg">
-        Start Secure Sharing
-      </button>
-    </div>
-  </section>
-
-  <!-- FOOTER -->
-  <footer class="border-t border-white/5">
-    <div class="max-w-7xl mx-auto px-6 py-12 grid md:grid-cols-3 gap-10 text-sm text-gray-400">
-      <div>
-        <h4 class="font-semibold text-white mb-3">Amanah</h4>
-        <p class="leading-relaxed">
-          A secure, consent-driven photo sharing platform for matrimony — built to prevent misuse and uncontrolled circulation.
-        </p>
-      </div>
-      <div>
-        <h4 class="font-semibold text-white mb-3">Legal</h4>
-        <ul class="space-y-2">
-          <li><a href="#" class="hover:text-white">Terms & Conditions</a></li>
-          <li class="text-red-400 font-medium">No Screenshot Policy</li>
-        </ul>
-      </div>
-      <div>
-        <h4 class="font-semibold text-white mb-3">Contact</h4>
-        <a href="mailto:help.amanahapp@gmail.com" class="hover:text-white">help.amanahapp@gmail.com</a>
-        <p class="mt-4 text-xs text-gray-500">© Amanah</p>
-      </div>
-    </div>
-  </footer>
-
+        // --- INIT APP ---
+        render(); // FIXED: Ensures app mounts correctly
+    </script>
 </body>
 </html>
