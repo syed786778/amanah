@@ -177,26 +177,50 @@
             render();
         }
         
-        // ** IMPROVEMENT 1: NON-RENDERING INPUT UPDATES FOR UPLOAD/VIEWER FORMS **
+        // --- INPUT UPDATE FUNCTIONS (Fixed to enable buttons when complete) ---
         
-        // UPLOAD FORM
+        // UPLOAD FORM INPUTS
+        let uploadFormComplete = false;
+        
+        function checkUploadFormComplete() {
+            const isComplete = !!state.uploaderInfo.name && !!state.uploaderInfo.email && state.photos.length > 0 && state.termsAccepted;
+            if (isComplete !== uploadFormComplete) {
+                uploadFormComplete = isComplete;
+                render(); // Only re-render when the button state *changes*
+            }
+        }
+        
         function updateUploaderName(input) {
             state.uploaderInfo.name = input.value;
+            checkUploadFormComplete();
         }
 
         function updateUploaderEmail(input) {
             state.uploaderInfo.email = input.value;
+            checkUploadFormComplete();
         }
 
-        // VIEWER FORM
+        // VIEWER FORM INPUTS (FIXED FOR BUTTON ENABLE)
+        let verifyFormComplete = false;
+        
+        function checkVerifyFormComplete() {
+            const isComplete = !!state.albumIdToView && !!state.viewerOtp;
+            if (isComplete !== verifyFormComplete) {
+                verifyFormComplete = isComplete;
+                render(); // Only re-render when the button state *changes*
+            }
+        }
+
         function updateAlbumId(input) {
             state.albumIdToView = input.value;
+            checkVerifyFormComplete();
         }
 
         function updateViewerOtp(input) {
             state.viewerOtp = input.value;
+            checkVerifyFormComplete();
         }
-        // END IMPROVEMENT 1
+        // --- END FIX ---
 
         // --- SCREENSHOT & SECURITY HANDLERS ---
         
@@ -433,6 +457,7 @@
             }))).then(e=>{
                 // Only take a maximum of 10 photos
                 state.photos=[...state.photos,...e].slice(0, 10);
+                checkUploadFormComplete(); // Check after file change
                 render()
             })
         }
@@ -540,18 +565,22 @@
         }
 
         function renderUploadView() {
-            const isUploadDisabled = !state.uploaderInfo.name || !state.uploaderInfo.email || state.photos.length === 0 || !state.termsAccepted;
-            // FIXED: oninput replaced with non-rendering handlers (updateUploaderName, updateUploaderEmail)
-            return `<div class="min-h-screen pt-12"><div class="max-w-4xl mx-auto px-4"><h2 class="text-3xl font-bold mb-8 text-white text-center">🔐 Create Secured Photo Album</h2><div class="bg-gray-800 rounded-xl p-8 card-shadow border border-gray-700"><div class="mb-6"><label class="block text-gray-300 font-semibold mb-2" for="uploaderName">Your Name (for sharing)</label><input type="text" id="uploaderName" value="${state.uploaderInfo.name}" oninput="updateUploaderName(this)" onblur="render()" class="w-full p-3 rounded-lg bg-gray-700 border border-gray-600 text-white focus:ring-purple-500 focus:border-purple-500" placeholder="e.g., Syed Rashad"></div><div class="mb-6"><label class="block text-gray-300 font-semibold mb-2" for="uploaderEmail">Your Email (for management)</label><input type="email" id="uploaderEmail" value="${state.uploaderInfo.email}" oninput="updateUploaderEmail(this)" onblur="render()" class="w-full p-3 rounded-lg bg-gray-700 border border-gray-600 text-white focus:ring-purple-500 focus:border-purple-500" placeholder="your.email@example.com"></div><div class="mb-6"><label class="block text-gray-300 font-semibold mb-2">Upload Photos (Max 10)</label><div class="flex items-center justify-center w-full"><label for="photo-upload" class="flex flex-col items-center justify-center w-full h-48 border-2 border-gray-600 border-dashed rounded-lg cursor-pointer bg-gray-700 hover:bg-gray-600"><div class="flex flex-col items-center justify-center pt-5 pb-6"><svg class="w-8 h-8 mb-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v8"/></svg><p class="mb-2 text-sm text-gray-400"><span class="font-semibold">Click to upload</span> or drag and drop</p><p class="text-xs text-gray-500">PNG, JPG, HEIC (MAX. 10 photos)</p></div><input id="photo-upload" type="file" multiple accept="image/*" class="hidden" onchange="handleFiles(event)"> </label></div></div><div id="photo-preview" class="grid grid-cols-4 gap-4 mb-6"> ${state.photos.map((photo, index) => `<div class="relative"><img src="${photo}" class="w-full h-24 object-cover rounded-lg border border-gray-600"><button onclick="state.photos=state.photos.filter((p,i)=>i!==${index});render()" class="absolute top-1 right-1 bg-red-600 text-white rounded-full p-1 leading-none text-xs hover:bg-red-700 transition"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg></button></div>`).join('')}</div><div class="mb-6 flex items-start"><input id="terms-checkbox" type="checkbox" onchange="toggleTerms(this)" ${state.termsAccepted ? 'checked' : ''} class="w-4 h-4 text-purple-600 bg-gray-700 border-gray-600 rounded focus:ring-purple-500 mt-1"><label for="terms-checkbox" class="ml-2 text-sm font-medium text-gray-300"> I accept the <a href="#" onclick="nav('terms'); return false;" class="text-purple-400 hover:underline">Terms & Conditions</a>, confirming I have permission to share these photos and acknowledge the strict *NO SCREENSHOT* policy.</label></div><button onclick="upload()" class="w-full py-4 text-white rounded-lg font-bold ${isUploadDisabled ? 'btn-disabled' : 'btn-gradient-purple'}" ${isUploadDisabled ? 'disabled' : ''}>${state.loading?'<div class="animate-spin rounded-full h-6 w-6 border-b-2 border-white mx-auto"></div>':'Create Secured Album'}</button></div></div></div>${renderFooter()}`;
+            // Updated disabled logic based on uploadFormComplete
+            const isUploadDisabled = !uploadFormComplete;
+            
+            return `<div class="min-h-screen pt-12"><div class="max-w-4xl mx-auto px-4"><h2 class="text-3xl font-bold mb-8 text-white text-center">🔐 Create Secured Photo Album</h2><div class="bg-gray-800 rounded-xl p-8 card-shadow border border-gray-700"><div class="mb-6"><label class="block text-gray-300 font-semibold mb-2" for="uploaderName">Your Name (for sharing)</label><input type="text" id="uploaderName" value="${state.uploaderInfo.name}" oninput="updateUploaderName(this)" class="w-full p-3 rounded-lg bg-gray-700 border border-gray-600 text-white focus:ring-purple-500 focus:border-purple-500" placeholder="e.g., Syed Rashad"></div><div class="mb-6"><label class="block text-gray-300 font-semibold mb-2" for="uploaderEmail">Your Email (for management)</label><input type="email" id="uploaderEmail" value="${state.uploaderInfo.email}" oninput="updateUploaderEmail(this)" class="w-full p-3 rounded-lg bg-gray-700 border border-gray-600 text-white focus:ring-purple-500 focus:border-purple-500" placeholder="your.email@example.com"></div><div class="mb-6"><label class="block text-gray-300 font-semibold mb-2">Upload Photos (Max 10)</label><div class="flex items-center justify-center w-full"><label for="photo-upload" class="flex flex-col items-center justify-center w-full h-48 border-2 border-gray-600 border-dashed rounded-lg cursor-pointer bg-gray-700 hover:bg-gray-600"><div class="flex flex-col items-center justify-center pt-5 pb-6"><svg class="w-8 h-8 mb-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v8"/></svg><p class="mb-2 text-sm text-gray-400"><span class="font-semibold">Click to upload</span> or drag and drop</p><p class="text-xs text-gray-500">PNG, JPG, HEIC (MAX. 10 photos)</p></div><input id="photo-upload" type="file" multiple accept="image/*" class="hidden" onchange="handleFiles(event)"> </label></div></div><div id="photo-preview" class="grid grid-cols-4 gap-4 mb-6"> ${state.photos.map((photo, index) => `<div class="relative"><img src="${photo}" class="w-full h-24 object-cover rounded-lg border border-gray-600"><button onclick="state.photos=state.photos.filter((p,i)=>i!==${index});checkUploadFormComplete();render()" class="absolute top-1 right-1 bg-red-600 text-white rounded-full p-1 leading-none text-xs hover:bg-red-700 transition"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg></button></div>`).join('')}</div><div class="mb-6 flex items-start"><input id="terms-checkbox" type="checkbox" onchange="toggleTerms(this); checkUploadFormComplete();" ${state.termsAccepted ? 'checked' : ''} class="w-4 h-4 text-purple-600 bg-gray-700 border-gray-600 rounded focus:ring-purple-500 mt-1"><label for="terms-checkbox" class="ml-2 text-sm font-medium text-gray-300"> I accept the <a href="#" onclick="nav('terms'); return false;" class="text-purple-400 hover:underline">Terms & Conditions</a>, confirming I have permission to share these photos and acknowledge the strict *NO SCREENSHOT* policy.</label></div><button onclick="upload()" class="w-full py-4 text-white rounded-lg font-bold ${isUploadDisabled ? 'btn-disabled' : 'btn-gradient-purple'}" ${isUploadDisabled ? 'disabled' : ''}>${state.loading?'<div class="animate-spin rounded-full h-6 w-6 border-b-2 border-white mx-auto"></div>':'Create Secured Album'}</button></div></div></div>${renderFooter()}`;
         }
         
         function renderManageView() {
+            // Managed email input still uses render() as it's a single input and is not prone to keyboard collapse issues
             return `<div class="min-h-screen pt-12"><div class="max-w-md mx-auto px-4"><h2 class="text-3xl font-bold mb-8 text-white text-center">⚙️ Manage Existing Album</h2><div class="bg-gray-800 rounded-xl p-8 card-shadow border border-gray-700"><p class="text-gray-400 mb-6 text-center">Enter the email you used to create the album to gain management access.</p><div class="mb-6"><label class="block text-gray-300 font-semibold mb-2" for="manageEmail">Your Email</label><input type="email" id="manageEmail" value="${state.manageEmail}" oninput="state.manageEmail=this.value;render()" class="w-full p-3 rounded-lg bg-gray-700 border border-gray-600 text-white focus:ring-purple-500 focus:border-purple-500" placeholder="your.email@example.com"></div><button onclick="manageAlbum()" class="w-full py-4 text-white rounded-lg font-bold ${!state.manageEmail ? 'btn-disabled' : 'btn-gradient-purple'}" ${!state.manageEmail ? 'disabled' : ''}>${state.loading?'<div class="animate-spin rounded-full h-6 w-6 border-b-2 border-white mx-auto"></div>':'Load Album for Management'}</button></div></div></div>${renderFooter()}`;
         }
         
         function renderVerifyView() {
-            // NOTE: oninput for viewerOtp and albumIdToView calls non-rendering functions
-            return `<div class="min-h-screen pt-12"><div class="max-w-md mx-auto px-4"><h2 class="text-3xl font-bold mb-8 text-white text-center">👁️ View Shared Photos</h2><div class="bg-gray-800 rounded-xl p-8 card-shadow border border-gray-700"><p class="text-gray-400 mb-6 text-center">Enter the Album ID and OTP provided by the sender.</p><div class="mb-6"><label class="block text-gray-300 font-semibold mb-2" for="albumIdToView">Album ID (e.g., album_xxxxxx)</label><input type="text" id="albumIdToView" value="${state.albumIdToView}" oninput="updateAlbumId(this)" class="w-full p-3 rounded-lg bg-gray-700 border border-gray-600 text-white focus:ring-green-500 focus:border-green-500" placeholder="album_xxxxxx"></div><div class="mb-6"><label class="block text-gray-300 font-semibold mb-2" for="viewerOtp">One-Time Passcode (OTP)</label><input type="text" id="viewerOtp" value="${state.viewerOtp}" oninput="updateViewerOtp(this)" class="w-full p-3 rounded-lg bg-gray-700 border border-gray-600 text-white focus:ring-green-500 focus:border-green-500" placeholder="000000" maxlength="6"></div><button onclick="verify()" class="w-full py-4 text-white rounded-lg font-bold ${!state.albumIdToView || !state.viewerOtp ? 'btn-disabled' : 'btn-gradient-purple'}" ${!state.albumIdToView || !state.viewerOtp ? 'disabled' : ''}>${state.loading?'<div class="animate-spin rounded-full h-6 w-6 border-b-2 border-white mx-auto"></div>':'Verify & View Album'}</button></div></div></div>${renderFooter()}`;
+            // Updated disabled logic based on verifyFormComplete
+            const isVerifyDisabled = !verifyFormComplete;
+
+            return `<div class="min-h-screen pt-12"><div class="max-w-md mx-auto px-4"><h2 class="text-3xl font-bold mb-8 text-white text-center">👁️ View Shared Photos</h2><div class="bg-gray-800 rounded-xl p-8 card-shadow border border-gray-700"><p class="text-gray-400 mb-6 text-center">Enter the Album ID and OTP provided by the sender.</p><div class="mb-6"><label class="block text-gray-300 font-semibold mb-2" for="albumIdToView">Album ID (e.g., album_xxxxxx)</label><input type="text" id="albumIdToView" value="${state.albumIdToView}" oninput="updateAlbumId(this)" class="w-full p-3 rounded-lg bg-gray-700 border border-gray-600 text-white focus:ring-green-500 focus:border-green-500" placeholder="album_xxxxxx"></div><div class="mb-6"><label class="block text-gray-300 font-semibold mb-2" for="viewerOtp">One-Time Passcode (OTP)</label><input type="text" id="viewerOtp" value="${state.viewerOtp}" oninput="updateViewerOtp(this)" class="w-full p-3 rounded-lg bg-gray-700 border border-gray-600 text-white focus:ring-green-500 focus:border-green-500" placeholder="000000" maxlength="6"></div><button onclick="verify()" class="w-full py-4 text-white rounded-lg font-bold ${isVerifyDisabled ? 'btn-disabled' : 'btn-gradient-purple'}" ${isVerifyDisabled ? 'disabled' : ''}>${state.loading?'<div class="animate-spin rounded-full h-6 w-6 border-b-2 border-white mx-auto"></div>':'Verify & View Album'}</button></div></div></div>${renderFooter()}`;
         }
         
         function renderViewerPhoto(photo, index) {
@@ -659,6 +688,10 @@
             const app = document.getElementById('app');
             let content = '';
             
+            // Re-evaluate form complete status before rendering to ensure button state is correct
+            if (state.view === 'viewer') checkVerifyFormComplete();
+            if (state.view === 'upload') checkUploadFormComplete();
+
             switch (state.view) {
                 case 'home':
                     content = renderHomeView();
