@@ -545,7 +545,7 @@ This is an automated alert from the Amanah reporting system.
                 `.trim();
                 
                 // Using a simple mailto link approach (can be enhanced with email API)
-                const mailtoLink = `mailto:help.amanahapp@gmail.com?subject=${encodeURIComponent(emailSubject)}&body=${encodeURIComponent(emailBody)}`;
+                const mailtoLink = `mailto:support@picamanah.space?subject=${encodeURIComponent(emailSubject)}&body=${encodeURIComponent(emailBody)}`;
                 
                 // Trigger email client
                 window.location.href = mailtoLink;
@@ -563,7 +563,7 @@ This is an automated alert from the Amanah reporting system.
                 render();
             } catch (error) {
                 console.error('Report error:', error);
-                alert('Failed to submit report. Please try again or contact help.amanahapp@gmail.com directly.');
+                alert('Failed to submit report. Please try again or contact support@picamanah.space directly.');
                 state.loading = false;
                 render();
             }
@@ -733,7 +733,7 @@ This is an automated alert from the Amanah reporting system.
                             <div>
                                 <h3 class="text-lg font-bold mb-4 text-purple-400">Contact</h3>
                                 <p class="text-sm text-gray-400 mb-2">Email:</p>
-                                <a href="mailto:help.amanahapp@gmail.com" class="text-purple-300 hover:text-purple-100 text-sm underline">help.amanahapp@gmail.com</a>
+                                <a href="mailto:support@picamanah.space" class="text-purple-300 hover:text-purple-100 text-sm underline">support@picamanah.space</a>
                                 <div class="mt-4">
                                     <a href="https://www.linkedin.com/in/syed-rashad/" target="_blank" rel="noopener noreferrer" class="inline-flex items-center text-blue-400 hover:text-blue-300 transition-colors">
                                         <svg class="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 24 24"><path d="M19 0h-14c-2.761 0-5 2.239-5 5v14c0 2.761 2.239 5 5 5h14c2.762 0 5-2.239 5-5v-14c0-2.761-2.238-5-5-5zm-11 19h-3v-11h3v11zm-1.5-12.268c-.966 0-1.75-.79-1.75-1.764s.784-1.764 1.75-1.764 1.75.79 1.75 1.764-.783 1.764-1.75 1.764zm13.5 12.268h-3v-5.604c0-3.368-4-3.113-4 0v5.604h-3v-11h3v1.765c1.396-2.586 7-2.777 7 2.476v6.759z"/></svg>
@@ -762,7 +762,7 @@ This is an automated alert from the Amanah reporting system.
                     <h2 class="text-3xl font-extrabold text-white mb-6 border-b border-gray-700 pb-3">Create New Secured Album</h2>
                     
                     <div class="bg-gray-800 p-6 rounded-xl card-shadow mb-8">
-                        <h3 class="text-xl font-bold text-purple-400 mb-4">1. Uploader Details</h3>
+                        <h3 class="text-xl font-bold text-purple-400 mb-4">1. Profile Details</h3>
                         <div class="space-y-4">
                             <div>
                                 <label for="uploader-name" class="block text-sm font-medium text-gray-400">Your Full Name (This will be shared with the viewer)</label>
@@ -828,7 +828,7 @@ This is an automated alert from the Amanah reporting system.
                 <div class="max-w-xl mx-auto px-4 pt-24 min-h-screen">
                     <h2 class="text-3xl font-extrabold text-white mb-6 border-b border-gray-700 pb-3 text-center">Manage Existing Album</h2>
                     <div class="bg-gray-800 p-6 rounded-xl card-shadow mb-8 border border-orange-500">
-                        <h3 class="text-xl font-bold text-orange-400 mb-4">Enter Uploader Email</h3>
+                        <h3 class="text-xl font-bold text-orange-400 mb-4">Enter Email</h3>
                         <p class="text-gray-400 text-sm mb-4">Please enter the email address used to create the album to access management controls.</p>
                         <div class="space-y-4">
                             <div>
@@ -865,7 +865,7 @@ This is an automated alert from the Amanah reporting system.
                             <div>
                                 <label for="viewer-otp" class="block text-sm font-medium text-gray-400">One-Time Passcode (OTP)</label>
                                 <input type="text" id="viewer-otp" oninput="updateViewerOtp(this)" value="${state.viewerOtp}"
-                                    class="mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm p-3 text-2xl font-mono text-center text-white focus:ring-green-500 focus:border-green-500" maxlength="6" placeholder="e.g., 123456" required>
+                                    class="mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm p-3 text-2xl font-mono text-center text-white focus:ring-green-500 focus:border-green-500" maxlength="6" placeholder="eg 123456" required>
                             </div>
                         </div>
                     </div>
@@ -1383,3 +1383,4 @@ This is an automated alert from the Amanah reporting system.
     </script>
 </body>
 </html>
+
