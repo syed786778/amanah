@@ -117,6 +117,7 @@
             otp: '',
             otpExpiry: null,
             viewerOtp: '',
+            viewerName: '',
             albumIdToView: '',
             isVerified: false,
             loading: false,
@@ -167,20 +168,8 @@
             protectionActive=false;
             state.view=e;
             
-            // Update URL for SEO and indexing
-            const urlMap = {
-                'home': '/',
-                'about': '/about',
-                'upload': '/upload',
-                'manage': '/manage',
-                'viewer': '/viewer',
-                'view': '/view',
-                'gallery': '/gallery',
-                'terms': '/terms'
-            };
-            
-            const newPath = urlMap[e] || '/';
-            window.history.pushState({view: e}, document.title, newPath);
+            // Update URL with hash routing (works on all static hosts)
+            window.location.hash = e === 'home' ? '' : e;
             
             if(e==='home'||e==='upload'||e==='manage'||e==='viewer'){
                 if(e === 'home' || e === 'upload' || e === 'viewer') {
@@ -227,7 +216,7 @@
         let verifyFormComplete = false;
         
         function checkVerifyFormComplete() {
-            const isComplete = !!state.albumIdToView && !!state.viewerOtp && state.viewerOtp.length === 6;
+            const isComplete = !!state.albumIdToView && !!state.viewerOtp && state.viewerOtp.length === 6 && !!state.viewerName && state.viewerName.trim().length >= 2;
             if (isComplete !== verifyFormComplete) {
                 verifyFormComplete = isComplete;
                 render();
@@ -243,6 +232,11 @@
 
         function updateViewerOtp(input) {
             state.viewerOtp = input.value;
+            checkVerifyFormComplete();
+        }
+        
+        function updateViewerName(input) {
+            state.viewerName = input.value;
             checkVerifyFormComplete();
         }
         
@@ -713,7 +707,7 @@ This is an automated alert from the Amanah reporting system.
             if(!state.currentAlbum)return;if(!confirm('Expire OTP now? This will immediately block all access to your album.'))return;state.loading=true;render();try{const e=Date.now()-1000,{error:t}=await supabaseClient.from('albums').update({otp_expiry:e}).eq('id',state.currentAlbum.id);if(t)throw t;state.currentAlbum.otp_expiry=e;state.otpExpiry=e;state.loading=false;alert('OTP expired successfully! No one can access this album now.');render()}catch(e){console.error('Expire OTP error:',e);alert('Failed to expire OTP: '+e.message);state.loading=false;render()}}
         
         async function verify(){
-            if(!verifyFormComplete){alert('Please enter a valid Album ID and a 6-digit OTP.');return}
+            if(!verifyFormComplete){alert('Please enter your name, a valid Album ID, and a 6-digit OTP.');return}
             state.loading=true;render();
             try{
                 const{data:e,error:t}=await supabaseClient.from('albums').select('*').eq('id',state.albumIdToView).single();
@@ -726,6 +720,17 @@ This is an automated alert from the Amanah reporting system.
                 
                 const{data:n,error:a}=await supabaseClient.from('photos').select('*').eq('album_id',state.albumIdToView).order('created_at',{ascending:true});
                 if(a)throw a;
+                
+                // Log viewer access
+                const accessLog = {
+                    album_id: state.albumIdToView,
+                    viewer_name: state.viewerName.trim(),
+                    accessed_at: new Date().toISOString(),
+                    uploader_email: e.email
+                };
+                
+                const {error: logError} = await supabaseClient.from('access_logs').insert(accessLog);
+                if(logError) console.error('Failed to log access:', logError);
                 
                 state.currentAlbum={...e,photos:n.map(e=>e.photo_data)};
                 state.isVerified=true;
@@ -745,6 +750,69 @@ This is an automated alert from the Amanah reporting system.
         
         async function delAlbum(){
             if(!confirm('Are you sure you want to delete this entire album? This action cannot be undone.'))return;state.loading=true;render();try{const{error:e}=await supabaseClient.from('albums').delete().eq('id',state.currentAlbum.id);if(e)throw e;state.view='home';state.currentAlbum=null;state.loading=false;alert('Album deleted successfully');render()}catch(e){console.error('Delete error:',e);alert('Failed to delete album: '+e.message);state.loading=false;render()}}
+
+        async function loadAccessLogs() {
+            if (!state.currentAlbum) return;
+            
+            const container = document.getElementById('access-logs-container');
+            container.innerHTML = '<div class="text-gray-400 text-sm">Loading access logs...</div>';
+            
+            try {
+                const { data: logs, error } = await supabaseClient
+                    .from('access_logs')
+                    .select('*')
+                    .eq('album_id', state.currentAlbum.id)
+                    .order('accessed_at', { ascending: false });
+                
+                if (error) throw error;
+                
+                if (!logs || logs.length === 0) {
+                    container.innerHTML = '<div class="text-gray-400 text-sm">No access logs yet. When someone views your album, their name and access time will appear here.</div>';
+                    return;
+                }
+                
+                const logsHtml = logs.map((log, index) => {
+                    const accessDate = new Date(log.accessed_at);
+                    const formattedDate = accessDate.toLocaleString('en-US', {
+                        month: 'short',
+                        day: 'numeric',
+                        year: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                    });
+                    
+                    return `
+                        <div class="bg-gray-700 rounded-lg p-4 border border-gray-600">
+                            <div class="flex items-center justify-between">
+                                <div class="flex items-center">
+                                    <div class="bg-blue-600 w-10 h-10 rounded-full flex items-center justify-center mr-3">
+                                        <span class="text-white font-bold text-lg">${log.viewer_name.charAt(0).toUpperCase()}</span>
+                                    </div>
+                                    <div>
+                                        <p class="text-white font-semibold">${log.viewer_name}</p>
+                                        <p class="text-gray-400 text-xs">${formattedDate}</p>
+                                    </div>
+                                </div>
+                                <div class="text-green-400 text-xs font-semibold">
+                                    ✓ Viewed
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+                
+                container.innerHTML = `
+                    <div class="space-y-3 max-h-96 overflow-y-auto">
+                        <p class="text-sm text-gray-400 mb-2">Total Access Count: <span class="font-bold text-white">${logs.length}</span></p>
+                        ${logsHtml}
+                    </div>
+                `;
+                
+            } catch (error) {
+                console.error('Failed to load access logs:', error);
+                container.innerHTML = '<div class="text-red-400 text-sm">Failed to load access logs. Please try again.</div>';
+            }
+        }
 
         function renderHeader() {
             const showMyAlbumButton = state.view === 'gallery';
@@ -1160,6 +1228,17 @@ This is an automated alert from the Amanah reporting system.
                         </div>
                     </div>
 
+                    <div class="bg-gray-800 p-6 rounded-xl card-shadow mb-8 border border-blue-600">
+                        <h3 class="text-2xl font-bold text-blue-400 mb-4 flex items-center">
+                            <svg class="w-6 h-6 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                            Access Logs
+                        </h3>
+                        <button onclick="loadAccessLogs()" class="bg-blue-600 text-white px-4 py-2 rounded-lg font-semibold hover:bg-blue-700 transition-colors">
+                            View Who Accessed This Album
+                        </button>
+                        <div id="access-logs-container" class="mt-4"></div>
+                    </div>
+
                     <div class="bg-gray-800 p-6 rounded-xl card-shadow mb-8 border border-red-600">
                         <h3 class="text-2xl font-bold text-red-400 mb-4 flex items-center">
                             <svg class="w-6 h-6 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
@@ -1432,48 +1511,21 @@ This is an automated alert from the Amanah reporting system.
             const urlParams = new URLSearchParams(window.location.search);
             const albumId = urlParams.get('album');
             
-            // Handle back/forward browser navigation
-            window.addEventListener('popstate', (event) => {
-                if (event.state && event.state.view) {
-                    state.view = event.state.view;
-                    render();
-                } else {
-                    // Check current path and set view accordingly
-                    const path = window.location.pathname;
-                    const pathToView = {
-                        '/': 'home',
-                        '/about': 'about',
-                        '/upload': 'upload',
-                        '/manage': 'manage',
-                        '/viewer': 'viewer',
-                        '/view': 'view',
-                        '/gallery': 'gallery',
-                        '/terms': 'terms'
-                    };
-                    state.view = pathToView[path] || 'home';
-                    render();
-                }
+            // Handle hash-based routing
+            window.addEventListener('hashchange', () => {
+                const hash = window.location.hash.slice(1); // Remove #
+                state.view = hash || 'home';
+                render();
             });
             
             if (albumId) {
                 state.albumIdToView = albumId;
                 state.view = 'viewer';
-                window.history.replaceState({view: 'viewer'}, document.title, '/viewer?album=' + albumId);
+                window.location.hash = 'viewer';
             } else {
-                // Set initial view based on current path
-                const path = window.location.pathname;
-                const pathToView = {
-                    '/': 'home',
-                    '/about': 'about',
-                    '/upload': 'upload',
-                    '/manage': 'manage',
-                    '/viewer': 'viewer',
-                    '/view': 'view',
-                    '/gallery': 'gallery',
-                    '/terms': 'terms'
-                };
-                state.view = pathToView[path] || 'home';
-                window.history.replaceState({view: state.view}, document.title, path);
+                // Set initial view based on hash
+                const hash = window.location.hash.slice(1);
+                state.view = hash || 'home';
             }
             
             render();
@@ -1484,4 +1536,3 @@ This is an automated alert from the Amanah reporting system.
     </script>
 </body>
 </html>
-
