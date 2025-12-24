@@ -149,6 +149,21 @@
             }
         }
         
+        function actionCard(title, color, svgPath, text, buttonText, action) {
+            return `
+                <div class="bg-gray-800 rounded-2xl shadow-xl p-6 border border-gray-700 hover:border-${color}-500 transition-all duration-300 flex flex-col">
+                    <div class="flex items-start mb-4">
+                        <svg class="w-8 h-8 text-${color}-400 mr-3 mt-1 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">${svgPath}</svg>
+                        <h3 class="text-xl font-bold text-white leading-tight">${title}</h3>
+                    </div>
+                    <div class="text-gray-400 space-y-2 mb-8 text-sm flex-grow">${text}</div>
+                    <button onclick="${action}" class="w-full bg-${color}-600 text-white py-3 rounded-lg font-semibold transition-all duration-300 hover:bg-${color}-700">
+                        ${buttonText}
+                    </button>
+                </div>
+            `;
+        }
+
         function nav(e){
             protectionActive=false;
             state.view=e;
@@ -170,14 +185,34 @@
             render()
         }
         
-        function updateViewerName(input) {
-            state.viewerName = input.value;
-            checkVerifyFormComplete();
+        function toggleTerms(checkbox) {
+            state.termsAccepted = checkbox.checked;
+            checkUploadFormComplete(); 
+            render();
+        }
+        
+        let uploadFormComplete = false;
+        function checkUploadFormComplete() {
+            const isComplete = !!state.uploaderInfo.name && !!state.uploaderInfo.email && state.photos.length > 0 && state.termsAccepted;
+            if (isComplete !== uploadFormComplete) {
+                uploadFormComplete = isComplete;
+                render();
+            }
+        }
+        
+        function updateUploaderName(input) {
+            state.uploaderInfo.name = input.value;
+            checkUploadFormComplete();
+        }
+
+        function updateUploaderEmail(input) {
+            state.uploaderInfo.email = input.value;
+            checkUploadFormComplete();
         }
 
         let verifyFormComplete = false;
         function checkVerifyFormComplete() {
-            const isComplete = !!state.albumIdToView && !!state.viewerOtp && state.viewerOtp.length === 6 && !!state.viewerName && state.viewerName.trim().length >= 2;
+            const isComplete = !!state.albumIdToView && !!state.viewerOtp && state.viewerOtp.length === 6 && !!state.viewerName;
             if (isComplete !== verifyFormComplete) {
                 verifyFormComplete = isComplete;
                 render();
@@ -196,124 +231,121 @@
             state.viewerOtp = input.value;
             checkVerifyFormComplete();
         }
-
-        function render() {
-            const app = document.getElementById('app');
-            
-            if (state.view === 'home') {
-                app.innerHTML = `
-                    <div class="min-h-screen flex flex-col items-center justify-center p-6">
-                        <div class="text-center mb-12">
-                            <h1 class="text-5xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-600 mb-4">AMANAH</h1>
-                            <p class="text-gray-400 text-lg">Secure & Private Marriage Profile Photo Sharing</p>
-                        </div>
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-8 w-full max-w-4xl">
-                            <div onclick="nav('upload')" class="bg-gray-800 p-8 rounded-2xl border border-gray-700 hover:border-purple-500 cursor-pointer transition-all group">
-                                <div class="w-16 h-16 bg-purple-900/30 rounded-xl flex items-center justify-center mb-6 group-hover:bg-purple-900/50 transition-all">
-                                    <svg class="w-8 h-8 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
-                                </div>
-                                <h2 class="text-2xl font-bold mb-2">Create Secure Album</h2>
-                                <p class="text-gray-400">Upload photos and protect them with an OTP and watermarks.</p>
-                            </div>
-                            <div onclick="nav('viewer')" class="bg-gray-800 p-8 rounded-2xl border border-gray-700 hover:border-pink-500 cursor-pointer transition-all group">
-                                <div class="w-16 h-16 bg-pink-900/30 rounded-xl flex items-center justify-center mb-6 group-hover:bg-pink-900/50 transition-all">
-                                    <svg class="w-8 h-8 text-pink-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
-                                </div>
-                                <h2 class="text-2xl font-bold mb-2">View an Album</h2>
-                                <p class="text-gray-400">Enter the Album ID and OTP shared with you to view photos.</p>
-                            </div>
-                        </div>
-                    </div>
-                `;
-            } else if (state.view === 'viewer') {
-                app.innerHTML = `
-                    <div class="min-h-screen flex items-center justify-center p-6">
-                        <div class="bg-gray-800 p-8 rounded-2xl shadow-2xl border border-gray-700 w-full max-w-md">
-                            <button onclick="nav('home')" class="text-gray-400 hover:text-white mb-6 flex items-center">
-                                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/></svg> Back
-                            </button>
-                            <h2 class="text-2xl font-bold mb-6 text-white text-center">Enter Access Details</h2>
-                            <div class="space-y-4">
-                                <div>
-                                    <label class="block text-sm font-medium mb-1 text-gray-400">Your Full Name</label>
-                                    <input type="text" placeholder="e.g. Abdullah Khan" oninput="updateViewerName(this)" value="${state.viewerName}" class="w-full bg-gray-900 border border-gray-700 rounded-lg px-4 py-3 focus:border-purple-500 focus:outline-none text-white">
-                                </div>
-                                <div>
-                                    <label class="block text-sm font-medium mb-1 text-gray-400">Album ID or Link</label>
-                                    <input type="text" placeholder="Paste link or ID here" oninput="updateAlbumId(this)" value="${state.albumIdToView}" class="w-full bg-gray-900 border border-gray-700 rounded-lg px-4 py-3 focus:border-purple-500 focus:outline-none text-white">
-                                </div>
-                                <div>
-                                    <label class="block text-sm font-medium mb-1 text-gray-400">Enter 6-Digit OTP</label>
-                                    <input type="text" maxlength="6" placeholder="Enter OTP" oninput="updateViewerOtp(this)" value="${state.viewerOtp}" class="w-full bg-gray-900 border border-gray-700 rounded-lg px-4 py-3 focus:border-purple-500 focus:outline-none text-white text-center text-xl tracking-widest font-mono">
-                                </div>
-                                <button onclick="verify()" class="w-full py-4 rounded-lg font-bold text-lg transition-all ${verifyFormComplete ? 'bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 shadow-lg shadow-purple-500/20' : 'bg-gray-700 text-gray-400 cursor-not-allowed'}">
-                                    ${state.loading ? 'Verifying...' : 'View Photos Securely'}
-                                </button>
-                                <p class="text-xs text-gray-500 text-center mt-4">By viewing this album, you agree that screenshots and recording are strictly prohibited. Your access is being logged for security.</p>
-                            </div>
-                        </div>
-                    </div>
-                `;
-            } else if (state.view === 'view') {
-                 // The actual viewing gallery (triggered after successful verify())
-                 app.innerHTML = `
-                    <div class="min-h-screen p-6 max-w-6xl mx-auto" id="viewer-content-area">
-                        <div class="flex flex-col md:flex-row justify-between items-center mb-8 gap-4">
-                            <div>
-                                <h2 class="text-3xl font-bold text-white mb-2">Viewing: ${state.currentAlbum.name}</h2>
-                                <p class="text-pink-400 font-semibold animate-pulse flex items-center">
-                                    <span class="inline-block w-2 h-2 bg-pink-500 rounded-full mr-2"></span>
-                                    Protected View Active
-                                </p>
-                            </div>
-                            <button onclick="nav('home')" class="px-6 py-2 bg-gray-800 border border-gray-700 rounded-lg hover:bg-gray-700 transition-all text-sm">Exit Session</button>
-                        </div>
-                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-6">
-                            ${state.currentAlbum.photos.map((p, i) => `
-                                <div class="bg-gray-800 rounded-2xl overflow-hidden border border-gray-700 relative group">
-                                    <div class="viewer-thumbnail secure-image-container">
-                                        <canvas id="secure-photo-${i}" class="cursor-pointer" onclick="openLightbox(${i})"></canvas>
-                                    </div>
-                                    <div class="absolute inset-0 pointer-events-none border-4 border-transparent group-hover:border-purple-500/30 transition-all"></div>
-                                </div>
-                            `).join('')}
-                        </div>
-                    </div>
-                 `;
-                 // Initialize canvas drawing
-                 state.currentAlbum.photos.forEach((p, i) => {
-                    setTimeout(() => drawPhotoOnCanvas(`secure-photo-${i}`, p, state.viewerName), 50);
-                 });
-                 setTimeout(setupProtection, 100);
+        
+        function updateViewerName(input) {
+            state.viewerName = input.value;
+            checkVerifyFormComplete();
+        }
+        
+        let manageFormComplete = false;
+        function checkManageFormComplete() {
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            const isComplete = emailRegex.test(state.manageEmail);
+            if (isComplete !== manageFormComplete) {
+                manageFormComplete = isComplete;
+                render();
             }
-            // ... (Rest of your render logic for 'upload', 'gallery', etc. would go here)
+        }
+
+        function updateManageEmail(input) {
+            state.manageEmail = input.value;
+            checkManageFormComplete();
+        }
+
+        function scrambleCanvasPixels(canvasId) {
+            const canvas = document.getElementById(canvasId);
+            if (!canvas) return;
+            const ctx = canvas.getContext('2d');
+            const width = canvas.offsetWidth || 600; 
+            const height = canvas.offsetHeight || 400;
+            canvas.width = width;
+            canvas.height = height;
+            ctx.fillStyle = '#1f2937'; 
+            ctx.fillRect(0, 0, width, height);
+            ctx.save();
+            ctx.fillStyle = 'rgba(255, 0, 0, 0.9)';
+            ctx.font = 'bold 50px Arial'; 
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText('ACCESS DENIED', width / 2, height / 2);
+            ctx.restore();
+        }
+
+        function handleScreenshotAttempt() {
+            const canvasElements = document.querySelectorAll('canvas[id^="secure-photo-"]');
+            canvasElements.forEach(canvas => scrambleCanvasPixels(canvas.id));
+            const overlay = document.getElementById('screenshot-block-overlay');
+            if (overlay) {
+                overlay.classList.add('active');
+                setTimeout(() => {
+                    overlay.classList.remove('active');
+                    nav('home');
+                }, 3000); 
+            }
+        }
+
+        function showScreenshotWarning() {
+            state.rightClickAttempts++;
+            if (state.rightClickAttempts === 1) {
+                alert('⚠️ WARNING: Screenshots and screen recording are strictly prohibited!\n\nThis action has been logged.');
+            } else if (state.rightClickAttempts >= 2) {
+                state.screenshotAttempts++;
+                handleScreenshotAttempt();
+            }
+        }
+        
+        function setupProtection() {
+            if (protectionActive) return;
+            protectionActive = true;
+            document.addEventListener('contextmenu', e => { e.preventDefault(); showScreenshotWarning(); });
+            document.addEventListener('keydown', e => {
+                if (e.key === 'PrintScreen' || (e.metaKey && e.shiftKey && (e.key === '3' || e.key === '4' || e.key === '5'))) {
+                    e.preventDefault();
+                    handleScreenshotAttempt();
+                }
+            });
+        }
+        
+        function drawPhotoOnCanvas(canvasId, photoData, watermarkText) {
+            const canvas = document.getElementById(canvasId);
+            if (!canvas) return;
+            const ctx = canvas.getContext('2d');
+            const img = new Image();
+            img.onload = () => {
+                canvas.width = img.width;
+                canvas.height = img.height;
+                ctx.drawImage(img, 0, 0);
+                ctx.save();
+                ctx.globalAlpha = 0.1;
+                ctx.fillStyle = 'white';
+                ctx.font = 'bold 40px Arial';
+                ctx.textAlign = 'center';
+                ctx.translate(canvas.width/2, canvas.height/2);
+                ctx.rotate(-45 * Math.PI / 180);
+                ctx.fillText(watermarkText || 'Amanah Secured', 0, 0);
+                ctx.restore();
+            };
+            img.src = photoData;
         }
 
         async function verify(){
-            if(!verifyFormComplete){alert('Please enter your name, a valid Album ID, and a 6-digit OTP.');return}
+            if(!verifyFormComplete){alert('Please enter your Name, Album ID, and 6-digit OTP.');return}
             state.loading=true;render();
             try{
                 const{data:e,error:t}=await supabaseClient.from('albums').select('*').eq('id',state.albumIdToView).single();
-                if(t||!e){alert('Album not found. Please check your Album ID.');state.loading=false;render();return}
-                
-                const isExpired = Date.now() > e.otp_expiry;
-                if(isExpired){alert('OTP has expired. Please contact the album owner to regenerate it.');state.loading=false;render();return}
-                
-                if(e.otp!==state.viewerOtp){alert('Invalid OTP. Please check and try again.');state.loading=false;render();return}
+                if(t||!e){alert('Album not found.');state.loading=false;render();return}
+                if(Date.now()>e.otp_expiry){alert('OTP expired.');state.loading=false;render();return}
+                if(e.otp!==state.viewerOtp){alert('Invalid OTP.');state.loading=false;render();return}
                 
                 const{data:n,error:a}=await supabaseClient.from('photos').select('*').eq('album_id',state.albumIdToView).order('created_at',{ascending:true});
                 if(a)throw a;
                 
-                // JOURNEY RECHECKED: Logging viewer access
-                const accessLog = {
+                // Records the name for the logs journey
+                await supabaseClient.from('access_logs').insert({
                     album_id: state.albumIdToView,
                     viewer_name: state.viewerName.trim(),
-                    accessed_at: new Date().toISOString(),
-                    uploader_email: e.email
-                };
-                
-                const {error: logError} = await supabaseClient.from('access_logs').insert(accessLog);
-                if(logError) console.error('Failed to log access:', logError);
+                    accessed_at: new Date().toISOString()
+                });
                 
                 state.currentAlbum={...e,photos:n.map(e=>e.photo_data)};
                 state.isVerified=true;
@@ -321,19 +353,61 @@
                 state.loading=false;
                 render();
             }catch(err){
-                console.error('Verify error:',err);
-                alert('An unexpected error occurred: ' + err.message);
+                console.error(err);
                 state.loading=false;
                 render();
             }
         }
 
-        // Initialize App
-        window.addEventListener('load', () => {
-            const hash = window.location.hash.replace('#', '');
-            if (hash) nav(hash);
-            else render();
-        });
+        function render() {
+            const app = document.getElementById('app');
+            if (state.view === 'home') {
+                app.innerHTML = `
+                    <div class="max-w-6xl mx-auto px-4 py-12 text-center">
+                        <h1 class="text-5xl font-extrabold mb-4 text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-600">AMANAH</h1>
+                        <p class="text-gray-400 text-lg mb-12">Secure & Private Marriage Profile Photo Sharing</p>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto">
+                            ${actionCard('Create Secure Album', 'purple', '<path d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>', 'Upload photos and protect them with an OTP and watermarks.', 'Create Secure Album', "nav('upload')")}
+                            ${actionCard('View an Album', 'pink', '<path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>', 'Enter the Album ID and OTP shared with you to view photos.', 'View an Album', "nav('viewer')")}
+                        </div>
+                    </div>
+                `;
+            } else if (state.view === 'viewer') {
+                app.innerHTML = `
+                    <div class="max-w-md mx-auto mt-20 p-8 bg-gray-800 rounded-2xl border border-gray-700">
+                        <h2 class="text-2xl font-bold mb-6">Enter Access Details</h2>
+                        <div class="space-y-4">
+                            <input type="text" placeholder="Your Full Name" oninput="updateViewerName(this)" value="${state.viewerName}" class="w-full bg-gray-900 border border-gray-700 rounded-lg px-4 py-3 focus:outline-none">
+                            <input type="text" placeholder="Album ID" oninput="updateAlbumId(this)" value="${state.albumIdToView}" class="w-full bg-gray-900 border border-gray-700 rounded-lg px-4 py-3 focus:outline-none">
+                            <input type="text" placeholder="6-digit OTP" oninput="updateViewerOtp(this)" value="${state.viewerOtp}" class="w-full bg-gray-900 border border-gray-700 rounded-lg px-4 py-3 focus:outline-none">
+                            <button onclick="verify()" class="w-full py-3 rounded-lg font-bold ${verifyFormComplete ? 'bg-purple-600' : 'bg-gray-600 pointer-events-none opacity-50'}">View Photos</button>
+                        </div>
+                    </div>
+                `;
+            } else if (state.view === 'view') {
+                app.innerHTML = `
+                    <div class="p-6 max-w-4xl mx-auto" id="viewer-content-area">
+                        <h2 class="text-2xl font-bold mb-6">Protected Album: ${state.currentAlbum.name}</h2>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            ${state.currentAlbum.photos.map((p, i) => `
+                                <div class="bg-gray-800 p-2 rounded-xl border border-gray-700">
+                                    <canvas id="secure-photo-${i}" class="w-full rounded-lg"></canvas>
+                                </div>
+                            `).join('')}
+                        </div>
+                        <button onclick="nav('home')" class="mt-8 px-6 py-2 bg-gray-700 rounded-lg">Back to Home</button>
+                    </div>
+                `;
+                state.currentAlbum.photos.forEach((p, i) => {
+                    setTimeout(() => drawPhotoOnCanvas(`secure-photo-${i}`, p, state.viewerName), 100);
+                });
+                setTimeout(setupProtection, 200);
+            } else {
+                app.innerHTML = `<div class="p-12 text-center text-gray-500">Screen for "${state.view}" would go here.</div>`;
+            }
+        }
+
+        window.onload = render;
     </script>
 </body>
 </html>
