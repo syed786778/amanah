@@ -117,6 +117,7 @@
             otp: '',
             otpExpiry: null,
             viewerOtp: '',
+            viewerName: '',
             albumIdToView: '',
             isVerified: false,
             loading: false,
@@ -167,20 +168,7 @@
             protectionActive=false;
             state.view=e;
             
-            // Update URL for SEO and indexing
-            const urlMap = {
-                'home': '/',
-                'about': '/about',
-                'upload': '/upload',
-                'manage': '/manage',
-                'viewer': '/viewer',
-                'view': '/view',
-                'gallery': '/gallery',
-                'terms': '/terms'
-            };
-            
-            const newPath = urlMap[e] || '/';
-            window.history.pushState({view: e}, document.title, newPath);
+            window.location.hash = e === 'home' ? '' : e;
             
             if(e==='home'||e==='upload'||e==='manage'||e==='viewer'){
                 if(e === 'home' || e === 'upload' || e === 'viewer') {
@@ -190,6 +178,7 @@
                 }
                 state.isVerified=false;
                 state.viewerOtp='';
+                state.viewerName='';
                 state.albumIdToView='';
                 state.lightboxIndex=null;
                 state.screenshotAttempts=0;
@@ -227,11 +216,12 @@
         let verifyFormComplete = false;
         
         function checkVerifyFormComplete() {
-            const isComplete = !!state.albumIdToView && !!state.viewerOtp && state.viewerOtp.length === 6;
+            const isComplete = !!state.albumIdToView && !!state.viewerOtp && state.viewerOtp.length === 6 && !!state.viewerName && state.viewerName.trim().length >= 2;
             if (isComplete !== verifyFormComplete) {
                 verifyFormComplete = isComplete;
                 render();
             }
+            return isComplete;
         }
 
         function updateAlbumId(input) {
@@ -243,6 +233,11 @@
 
         function updateViewerOtp(input) {
             state.viewerOtp = input.value;
+            checkVerifyFormComplete();
+        }
+        
+        function updateViewerName(input) {
+            state.viewerName = input.value;
             checkVerifyFormComplete();
         }
         
@@ -289,7 +284,6 @@
         }
 
         function handleScreenshotAttempt() {
-            // Scramble all visible secure canvases
             const canvasElements = document.querySelectorAll('canvas[id^="secure-photo-"]');
             canvasElements.forEach(canvas => scrambleCanvasPixels(canvas.id));
             
@@ -303,7 +297,6 @@
                     attemptNumber: state.screenshotAttempts
                 });
 
-                // Auto redirect after 3 seconds
                 setTimeout(() => {
                     overlay.classList.remove('active');
                     nav('home');
@@ -315,10 +308,8 @@
             state.rightClickAttempts++;
             
             if (state.rightClickAttempts === 1) {
-                // First attempt - Just warning, no logout
                 alert('⚠️ WARNING: Screenshots and screen recording are strictly prohibited!\n\nThis action has been logged. Any further attempts will result in immediate logout.');
             } else if (state.rightClickAttempts >= 2) {
-                // Second attempt - Trigger full screenshot detection flow
                 state.screenshotAttempts++;
                 handleScreenshotAttempt();
             }
@@ -570,17 +561,15 @@
                     report_reason: state.reportReason,
                     report_details: state.reportDetails || 'No additional details provided',
                     reported_at: new Date().toISOString(),
-                    reporter_ip: 'Not captured' // Could be enhanced with IP detection
+                    reporter_ip: 'Not captured'
                 };
                 
-                // Store report in database
                 const { error: dbError } = await supabaseClient.from('reports').insert(reportData);
                 
                 if (dbError) {
                     console.error('Database error:', dbError);
                 }
                 
-                // Send email notification to admin
                 const emailSubject = `🚨 URGENT: User Report - ${state.reportReason}`;
                 const emailBody = `
 AMANAH PLATFORM - USER REPORT ALERT
@@ -605,10 +594,8 @@ RECOMMENDED ACTIONS:
 This is an automated alert from the Amanah reporting system.
                 `.trim();
                 
-                // Using a simple mailto link approach (can be enhanced with email API)
-                const mailtoLink = `mailto:help.amanahapp@gmail.com?subject=${encodeURIComponent(emailSubject)}&body=${encodeURIComponent(emailBody)}`;
+                const mailtoLink = `mailto:support@picamanah.space?subject=${encodeURIComponent(emailSubject)}&body=${encodeURIComponent(emailBody)}`;
                 
-                // Trigger email client
                 window.location.href = mailtoLink;
                 
                 state.loading = false;
@@ -616,7 +603,6 @@ This is an automated alert from the Amanah reporting system.
                 
                 alert('Thank you for your report. The platform administrator has been notified and will review this album immediately. Your report helps keep Amanah safe for everyone.');
                 
-                // Log out the user after reporting
                 setTimeout(() => {
                     nav('home');
                 }, 2000);
@@ -624,7 +610,7 @@ This is an automated alert from the Amanah reporting system.
                 render();
             } catch (error) {
                 console.error('Report error:', error);
-                alert('Failed to submit report. Please try again or contact help.amanahapp@gmail.com directly.');
+                alert('Failed to submit report. Please try again or contact support@picamanah.space directly.');
                 state.loading = false;
                 render();
             }
@@ -661,7 +647,7 @@ This is an automated alert from the Amanah reporting system.
                 state.currentAlbum={...album,photos:photos.map(p=>p.photo_data)};
                 state.otp=album.otp;
                 state.otpExpiry=album.otp_expiry;
-                state.shareLink=location.origin+location.pathname+'?album='+album.id;
+                state.shareLink=window.location.origin+window.location.pathname+'?album='+album.id;
                 state.view='gallery';
                 state.loading=false;
                 render();
@@ -678,15 +664,26 @@ This is an automated alert from the Amanah reporting system.
                 alert('You must accept the Terms & Conditions before creating an album.');
                 return;
             }
-            if(!state.uploaderInfo.name||!state.uploaderInfo.email||!state.photos.length){alert('Please fill all required fields and upload at least one photo');return}state.loading=true;render();try{const e=genAlbumId(),t=genOTP(),n=Date.now()+864e5,{data:a,error:o}=await supabaseClient.from('albums').insert({id:e,name:state.uploaderInfo.name,email:state.uploaderInfo.email.trim().toLowerCase(),otp:t,otp_expiry:n,created_at:Date.now()}).select().single();if(o)throw o;const{error:r}=await supabaseClient.from('photos').insert(state.photos.map(t=>({album_id:e,photo_data:t})));if(r)throw r;const{data:s,error:i}=await supabaseClient.from('photos').select('*').eq('album_id',e).order('created_at',{ascending:true});if(i)throw i;state.currentAlbum={...a,photos:s.map(e=>e.photo_data)};state.otp=t;state.otpExpiry=n;state.shareLink=location.origin+location.pathname+'?album='+e;state.view='gallery';state.loading=false;render()}catch(e){console.error('Upload error:',e);alert('Failed to create album: '+e.message);state.loading=false;render()}}
+            if(!state.uploaderInfo.name||!state.uploaderInfo.email||!state.photos.length){alert('Please fill all required fields and upload at least one photo');return}state.loading=true;render();try{const e=genAlbumId(),t=genOTP(),n=Date.now()+864e5,{data:a,error:o}=await supabaseClient.from('albums').insert({id:e,name:state.uploaderInfo.name,email:state.uploaderInfo.email.trim().toLowerCase(),otp:t,otp_expiry:n,created_at:Date.now()}).select().single();if(o)throw o;const{error:r}=await supabaseClient.from('photos').insert(state.photos.map(t=>({album_id:e,photo_data:t})));if(r)throw r;const{data:s,error:i}=await supabaseClient.from('photos').select('*').eq('album_id',e).order('created_at',{ascending:true});if(i)throw i;state.currentAlbum={...a,photos:s.map(e=>e.photo_data)};state.otp=t;state.otpExpiry=n;state.shareLink=window.location.origin+window.location.pathname+'?album='+e;state.view='gallery';state.loading=false;render()}catch(e){console.error('Upload error:',e);alert('Failed to create album: '+e.message);state.loading=false;render()}}
 
         async function regenOTP(){
             if(!state.currentAlbum)return;
+            
+            const duration = prompt('Select OTP validity duration:\n\n1 = 24 hours (1 day)\n3 = 3 days\n6 = 6 days\n\nEnter number (1, 3, or 6):', '1');
+            
+            if (!duration) return;
+            
+            const durationNum = parseInt(duration);
+            if (![1, 3, 6].includes(durationNum)) {
+                alert('Invalid duration. Please enter 1, 3, or 6.');
+                return;
+            }
+            
             state.loading=true;
             render();
             try{
                 const e=genOTP();
-                const t=Date.now()+864e5; 
+                const t=Date.now()+(durationNum * 864e5);
                 
                 const {error:n}=await supabaseClient.from('albums').update({
                     otp:e,
@@ -699,7 +696,7 @@ This is an automated alert from the Amanah reporting system.
                 state.otp=e;
                 state.otpExpiry=t;
                 state.loading=false;
-                alert('New OTP generated successfully! Access is now valid for the next 24 hours.');
+                alert(`New OTP generated successfully! Access is now valid for the next ${durationNum} day(s).`);
                 render();
             }catch(e){
                 console.error('OTP error:',e);
@@ -713,7 +710,7 @@ This is an automated alert from the Amanah reporting system.
             if(!state.currentAlbum)return;if(!confirm('Expire OTP now? This will immediately block all access to your album.'))return;state.loading=true;render();try{const e=Date.now()-1000,{error:t}=await supabaseClient.from('albums').update({otp_expiry:e}).eq('id',state.currentAlbum.id);if(t)throw t;state.currentAlbum.otp_expiry=e;state.otpExpiry=e;state.loading=false;alert('OTP expired successfully! No one can access this album now.');render()}catch(e){console.error('Expire OTP error:',e);alert('Failed to expire OTP: '+e.message);state.loading=false;render()}}
         
         async function verify(){
-            if(!verifyFormComplete){alert('Please enter a valid Album ID and a 6-digit OTP.');return}
+            if(!verifyFormComplete){alert('Please enter your name, a valid Album ID, and a 6-digit OTP.');return}
             state.loading=true;render();
             try{
                 const{data:e,error:t}=await supabaseClient.from('albums').select('*').eq('id',state.albumIdToView).single();
@@ -726,6 +723,16 @@ This is an automated alert from the Amanah reporting system.
                 
                 const{data:n,error:a}=await supabaseClient.from('photos').select('*').eq('album_id',state.albumIdToView).order('created_at',{ascending:true});
                 if(a)throw a;
+                
+                const accessLog = {
+                    album_id: state.albumIdToView,
+                    viewer_name: state.viewerName.trim(),
+                    accessed_at: new Date().toISOString(),
+                    uploader_email: e.email
+                };
+                
+                const {error: logError} = await supabaseClient.from('access_logs').insert(accessLog);
+                if(logError) console.error('Failed to log access:', logError);
                 
                 state.currentAlbum={...e,photos:n.map(e=>e.photo_data)};
                 state.isVerified=true;
@@ -745,6 +752,69 @@ This is an automated alert from the Amanah reporting system.
         
         async function delAlbum(){
             if(!confirm('Are you sure you want to delete this entire album? This action cannot be undone.'))return;state.loading=true;render();try{const{error:e}=await supabaseClient.from('albums').delete().eq('id',state.currentAlbum.id);if(e)throw e;state.view='home';state.currentAlbum=null;state.loading=false;alert('Album deleted successfully');render()}catch(e){console.error('Delete error:',e);alert('Failed to delete album: '+e.message);state.loading=false;render()}}
+
+        async function loadAccessLogs() {
+            if (!state.currentAlbum) return;
+            
+            const container = document.getElementById('access-logs-container');
+            container.innerHTML = '<div class="text-gray-400 text-sm">Loading access logs...</div>';
+            
+            try {
+                const { data: logs, error } = await supabaseClient
+                    .from('access_logs')
+                    .select('*')
+                    .eq('album_id', state.currentAlbum.id)
+                    .order('accessed_at', { ascending: false });
+                
+                if (error) throw error;
+                
+                if (!logs || logs.length === 0) {
+                    container.innerHTML = '<div class="text-gray-400 text-sm">No access logs yet. When someone views your album, their name and access time will appear here.</div>';
+                    return;
+                }
+                
+                const logsHtml = logs.map((log, index) => {
+                    const accessDate = new Date(log.accessed_at);
+                    const formattedDate = accessDate.toLocaleString('en-US', {
+                        month: 'short',
+                        day: 'numeric',
+                        year: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                    });
+                    
+                    return `
+                        <div class="bg-gray-700 rounded-lg p-4 border border-gray-600">
+                            <div class="flex items-center justify-between">
+                                <div class="flex items-center">
+                                    <div class="bg-blue-600 w-10 h-10 rounded-full flex items-center justify-center mr-3">
+                                        <span class="text-white font-bold text-lg">${log.viewer_name.charAt(0).toUpperCase()}</span>
+                                    </div>
+                                    <div>
+                                        <p class="text-white font-semibold">${log.viewer_name}</p>
+                                        <p class="text-gray-400 text-xs">${formattedDate}</p>
+                                    </div>
+                                </div>
+                                <div class="text-green-400 text-xs font-semibold">
+                                    ✓ Viewed
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+                
+                container.innerHTML = `
+                    <div class="space-y-3 max-h-96 overflow-y-auto">
+                        <p class="text-sm text-gray-400 mb-2">Total Access Count: <span class="font-bold text-white">${logs.length}</span></p>
+                        ${logsHtml}
+                    </div>
+                `;
+                
+            } catch (error) {
+                console.error('Failed to load access logs:', error);
+                container.innerHTML = '<div class="text-red-400 text-sm">Failed to load access logs. Please try again.</div>';
+            }
+        }
 
         function renderHeader() {
             const showMyAlbumButton = state.view === 'gallery';
@@ -794,7 +864,7 @@ This is an automated alert from the Amanah reporting system.
                             <div>
                                 <h3 class="text-lg font-bold mb-4 text-purple-400">Contact</h3>
                                 <p class="text-sm text-gray-400 mb-2">Email:</p>
-                                <a href="mailto:help.amanahapp@gmail.com" class="text-purple-300 hover:text-purple-100 text-sm underline">help.amanahapp@gmail.com</a>
+                                <a href="mailto:support@picamanah.space" class="text-purple-300 hover:text-purple-100 text-sm underline">support@picamanah.space</a>
                                 <div class="mt-4">
                                     <a href="https://www.linkedin.com/in/syed-rashad/" target="_blank" rel="noopener noreferrer" class="inline-flex items-center text-blue-400 hover:text-blue-300 transition-colors">
                                         <svg class="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 24 24"><path d="M19 0h-14c-2.761 0-5 2.239-5 5v14c0 2.761 2.239 5 5 5h14c2.762 0 5-2.239 5-5v-14c0-2.761-2.238-5-5-5zm-11 19h-3v-11h3v11zm-1.5-12.268c-.966 0-1.75-.79-1.75-1.764s.784-1.764 1.75-1.764 1.75.79 1.75 1.764-.783 1.764-1.75 1.764zm13.5 12.268h-3v-5.604c0-3.368-4-3.113-4 0v5.604h-3v-11h3v1.765c1.396-2.586 7-2.777 7 2.476v6.759z"/></svg>
@@ -823,7 +893,7 @@ This is an automated alert from the Amanah reporting system.
                     <h2 class="text-3xl font-extrabold text-white mb-6 border-b border-gray-700 pb-3">Create New Secured Album</h2>
                     
                     <div class="bg-gray-800 p-6 rounded-xl card-shadow mb-8">
-                        <h3 class="text-xl font-bold text-purple-400 mb-4">1. Uploader Details</h3>
+                        <h3 class="text-xl font-bold text-purple-400 mb-4">1. Profile Details</h3>
                         <div class="space-y-4">
                             <div>
                                 <label for="uploader-name" class="block text-sm font-medium text-gray-400">Your Full Name (This will be shared with the viewer)</label>
@@ -916,15 +986,21 @@ This is an automated alert from the Amanah reporting system.
                     <h2 class="text-3xl font-extrabold text-white mb-6 border-b border-gray-700 pb-3 text-center">View Secured Album</h2>
                     <div class="bg-gray-800 p-6 rounded-xl card-shadow mb-8 border border-green-500">
                         <h3 class="text-xl font-bold text-green-400 mb-4">Enter Access Details</h3>
-                        <p class="text-gray-400 text-sm mb-4">Enter the Album ID and the One-Time Passcode (OTP) provided by the sender.</p>
+                        <p class="text-gray-400 text-sm mb-4">Enter your name, the Album ID, and the One-Time Passcode (OTP) provided by the sender.</p>
                         <div class="space-y-4">
                             <div>
-                                <label for="album-id-view" class="block text-sm font-medium text-gray-400">Album ID / Link</label>
+                                <label for="viewer-name" class="block text-sm font-medium text-gray-400">Your Full Name *</label>
+                                <input type="text" id="viewer-name" oninput="updateViewerName(this)" value="${state.viewerName}"
+                                    class="mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm p-3 text-white focus:ring-green-500 focus:border-green-500" placeholder="e.g., John Doe" required>
+                                <p class="text-xs text-gray-500 mt-1">Your name will be logged for security purposes</p>
+                            </div>
+                            <div>
+                                <label for="album-id-view" class="block text-sm font-medium text-gray-400">Album ID / Link *</label>
                                 <input type="text" id="album-id-view" oninput="updateAlbumId(this)" value="${state.albumIdToView}"
                                     class="mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm p-3 text-white focus:ring-green-500 focus:border-green-500" placeholder="e.g., album_xxxxxxxxx or full link" required>
                             </div>
                             <div>
-                                <label for="viewer-otp" class="block text-sm font-medium text-gray-400">One-Time Passcode (OTP)</label>
+                                <label for="viewer-otp" class="block text-sm font-medium text-gray-400">One-Time Passcode (OTP) *</label>
                                 <input type="text" id="viewer-otp" oninput="updateViewerOtp(this)" value="${state.viewerOtp}"
                                     class="mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm p-3 text-2xl font-mono text-center text-white focus:ring-green-500 focus:border-green-500" maxlength="6" placeholder="e.g., 123456" required>
                             </div>
@@ -1160,6 +1236,17 @@ This is an automated alert from the Amanah reporting system.
                         </div>
                     </div>
 
+                    <div class="bg-gray-800 p-6 rounded-xl card-shadow mb-8 border border-blue-600">
+                        <h3 class="text-2xl font-bold text-blue-400 mb-4 flex items-center">
+                            <svg class="w-6 h-6 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                            Access Logs
+                        </h3>
+                        <button onclick="loadAccessLogs()" class="bg-blue-600 text-white px-4 py-2 rounded-lg font-semibold hover:bg-blue-700 transition-colors">
+                            View Who Accessed This Album
+                        </button>
+                        <div id="access-logs-container" class="mt-4"></div>
+                    </div>
+
                     <div class="bg-gray-800 p-6 rounded-xl card-shadow mb-8 border border-red-600">
                         <h3 class="text-2xl font-bold text-red-400 mb-4 flex items-center">
                             <svg class="w-6 h-6 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
@@ -1167,7 +1254,7 @@ This is an automated alert from the Amanah reporting system.
                         </h3>
                         <div class="flex flex-wrap gap-4">
                             <button onclick="regenOTP()" class="flex-1 min-w-full sm:min-w-[150px] bg-yellow-600 text-white py-3 rounded-lg font-semibold hover:bg-yellow-700 transition-colors">
-                                Regenerate New OTP (24 Hrs)
+                                Regenerate OTP (1, 3, or 6 Days)
                             </button>
                             <button onclick="expireOTP()" class="flex-1 min-w-full sm:min-w-[150px] bg-red-600 text-white py-3 rounded-lg font-semibold hover:bg-red-700 transition-colors">
                                 Expire OTP Now
@@ -1409,7 +1496,6 @@ This is an automated alert from the Amanah reporting system.
             
             app.innerHTML = content;
             
-            // Render Report Modal if active
             if (state.showReportModal) {
                 app.insertAdjacentHTML('beforeend', renderReportModal());
             }
@@ -1432,48 +1518,19 @@ This is an automated alert from the Amanah reporting system.
             const urlParams = new URLSearchParams(window.location.search);
             const albumId = urlParams.get('album');
             
-            // Handle back/forward browser navigation
-            window.addEventListener('popstate', (event) => {
-                if (event.state && event.state.view) {
-                    state.view = event.state.view;
-                    render();
-                } else {
-                    // Check current path and set view accordingly
-                    const path = window.location.pathname;
-                    const pathToView = {
-                        '/': 'home',
-                        '/about': 'about',
-                        '/upload': 'upload',
-                        '/manage': 'manage',
-                        '/viewer': 'viewer',
-                        '/view': 'view',
-                        '/gallery': 'gallery',
-                        '/terms': 'terms'
-                    };
-                    state.view = pathToView[path] || 'home';
-                    render();
-                }
+            window.addEventListener('hashchange', () => {
+                const hash = window.location.hash.slice(1);
+                state.view = hash || 'home';
+                render();
             });
             
             if (albumId) {
                 state.albumIdToView = albumId;
                 state.view = 'viewer';
-                window.history.replaceState({view: 'viewer'}, document.title, '/viewer?album=' + albumId);
+                window.location.hash = 'viewer';
             } else {
-                // Set initial view based on current path
-                const path = window.location.pathname;
-                const pathToView = {
-                    '/': 'home',
-                    '/about': 'about',
-                    '/upload': 'upload',
-                    '/manage': 'manage',
-                    '/viewer': 'viewer',
-                    '/view': 'view',
-                    '/gallery': 'gallery',
-                    '/terms': 'terms'
-                };
-                state.view = pathToView[path] || 'home';
-                window.history.replaceState({view: state.view}, document.title, path);
+                const hash = window.location.hash.slice(1);
+                state.view = hash || 'home';
             }
             
             render();
@@ -1484,4 +1541,3 @@ This is an automated alert from the Amanah reporting system.
     </script>
 </body>
 </html>
-
